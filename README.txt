@@ -4,7 +4,7 @@ sinotify
 
 == DESCRIPTION:
 
-Version of ruby-inotify tweaked to:
+xxVersion of ruby-inotify tweaked to:
 
 Inotify is a linux library for sending event notification when something on the file system
 has changed. (see 'man inotify' for detail). This is a wrapper for the linux inotify library
