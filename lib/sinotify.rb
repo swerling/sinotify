@@ -43,7 +43,9 @@ module Sinotify
 
 end  # module Sinotify
 
+require 'rubygems'
 require File.join(File.dirname(__FILE__), '../ext/sinotify.so')
+require 'cosell'
 Sinotify.require_all_libs_relative_to(__FILE__)
 
 # EOF

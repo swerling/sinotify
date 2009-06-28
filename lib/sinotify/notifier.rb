@@ -1,26 +1,41 @@
 module Sinotify
 
   class Notifier
-    attr_accessor :children
+    include Cosell
+
+    private
+
+    attr_accessor :prim_notifier
+
+    public
+
+    attr_accessor :file_or_dir_name, :children
+
 
     @@notifiers = []
+
+    def initialize(file_or_dir_name, opts = {})
+      raise "Could not find #{file_or_dir_name}" unless File.exist(file_or_dir_name)
+
+      @@file_or_dir_name << file_or_dir_name
+      opts[:recurse] ||= true
+      opts[:recurse_throttle] ||= 10 # how many directories at a time to register
+      opts[:etypes] ||= [:all_events]
+      (opts[:etypes] = [:all_events]) if opts[:etypes].include?(:all_events)
+
+      @notifiers << self
+      self
+    end
 
     def self.all_notifiers
       @@notifiers
     end
 
-    def self.close_all_notifiers
+    def self.close_all!
       @@notifiers.dup.each do |notifier|
         notifier.close
         @@notifiers.delete notifier
       end
-    end
-
-    def add_listener(l, opts = {})
-      opts[:recurse] ||= true
-      opts[:recurse_throttle] ||= 10 # how many directories at a time to register
-      opts[:etypes] ||= [:all_events]
-      (opts[:etypes] = [:all_events]) if opts[:etypes].include?(:all_events)
     end
 
     def remove_listener(l)

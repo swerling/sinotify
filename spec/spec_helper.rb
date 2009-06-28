@@ -1,6 +1,4 @@
-
-require File.expand_path(
-    File.join(File.dirname(__FILE__), %w[.. lib sinotify]))
+require File.join(File.dirname(__FILE__), '../lib/sinotify')
 
 Spec::Runner.configure do |config|
   # == Mock Framework

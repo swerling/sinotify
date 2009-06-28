@@ -25,6 +25,7 @@ PROJ.url = 'http://tab-a.slot-z.net'
 PROJ.version = Sinotify::VERSION
 PROJ.rubyforge.name = 'sinotify'
 PROJ.gem.extentions = FileList['ext/**/extconf.rb']
+PROJ.gem.dependencies = ['cosell']
 PROJ.spec.opts << '--color'
 
 # EOF

@@ -227,7 +227,7 @@ void Init_sinotify () {
 
   // The Inotify class
   //rb_cNotifier = rb_define_class("Sinotify", rb_cObject);
-	rb_cNotifier = rb_define_class_under(rb_cSinotify, "Notifier", rb_cObject);
+	rb_cNotifier = rb_define_class_under(rb_cSinotify, "PrimNotifier", rb_cObject);
 
   // following inotify masks taken from inotify lib, see 'man inotify', section
 	rb_const_set(rb_cSinotify, rb_intern("ACCESS"), INT2NUM(IN_ACCESS));

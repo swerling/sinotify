@@ -4,6 +4,13 @@ sinotify
 
 == DESCRIPTION:
 
+What is inotify: 
+  on linux, type 'man inotify'
+  on others, 'google inotify' 
+
+The 's' in 'sinotify' in fact stands for 'suck:' 
+  http://www.kernel.org/pub/linux/kernel/people/rml/inotify/README
+
 xxVersion of ruby-inotify tweaked to:
 
 Inotify is a linux library for sending event notification when something on the file system
