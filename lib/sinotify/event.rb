@@ -1,28 +1,35 @@
 module Sinotify
 
+  # 
+  # Sinotify events are 'announced' by Cosell as they come in to the Notifier.
+  # The list of event types is below. 
   #
-  # Sinotify::Event is a ruby wrapper for an inotify event
-  # Use the Sinotify::Notifier to register to listen for these Events.
+  # Also see Sinotify::PrimEvent
   #
-  # Methods :name, :mask, and :wd defined in c lib
+  # THIS EVENT CLASS DEVIATES FROM PRIMEVENT IN ONE SIGNIFICANT REGARD. Sinotify does not 
+  # pass events about children of a given directory, only about the directory (or file) itself.
+  # Example of difference: Let's say you
+  #   1. create a directory called '/tmp/test'
+  #   2. create a file called '/tmp/test/blah'
+  #   3. You put a watch on the directory '/tmp/test'
+  #   4. You do a 'rm -rf /tmp/test' (thus deleting both the file /tmp/test/blah and 
+  #      the directory /tmp/test)
   #
-  # For convenience, inotify masks are represented in the Event as an 'etype', 
-  # which is just a ruby symbol corresponding to the mask. For instance, a mask
-  # represented as Sinotify::MODIFY has an etype of :modify. You can still get
-  # the mask if you want the 'raw' int mask value. In other words:
-  # <pre>
-  #      $ irb
-  #      >> require 'sinotify'
-  #      => true
-  #      >> Sinotify::MODIFY
-  #      => 2
-  #      >> Sinotify::Event.etype_from_mask(Sinotify::MODIFY)
-  #      => :modify
-  #      >> Sinotify::Event.mask_from_etype(:modify)
-  #      => 2
-  # </pre>
+  # In this example, Sinotify acts a little diffently from linux inotify. Linux inotify
+  # would send a couple of delete events -- a :delete event for /tmp/test with the 'name'
+  # of the event set to 'blah', indicating a file named 'blah' was deleted. Then, a :delete_self
+  # event would be sent.
   #
-  # Event List as defined in sinotify.h (see 'man inotify' for details on these event types):
+  # In contrast, Sinotify::Notifier would send 2 events, both :delete events, 
+  # one where the full path is '/tmp/test/blah', and one for '/tmp/test'. In general, all 
+  # Sinotify events apply _to the thing that was altered_, not to its children. If there
+  # is an event where this is not the case, it should be considered a bug. 
+  #
+  # If you want to work with an even notifier that works more like the low level linux inotify
+  # (receiving both :delete and :delete_self), you will have to work directly with PrimNotifier and 
+  # PrimEvent (along with there irritating synchronous event loop)
+  #
+  # Here is the list of possible events adapted from the definitions in [linux_src]/include/linux/inotify.h: 
   #
   #   File related:
   #     :access	# File was accessed 
@@ -54,62 +61,66 @@ module Sinotify
   #
   class Event
 
-    # map the constants defined in the 'c' lib to ruby symbols
-    @@mask_to_etype_map = {
-      Sinotify::CREATE => :create,
-      Sinotify::MOVE => :move,
-      Sinotify::ACCESS => :access,
-      Sinotify::MODIFY => :modify,
-      Sinotify::ATTRIB => :attrib,
-      Sinotify::CLOSE_WRITE => :close_write,
-      Sinotify::CLOSE_NOWRITE => :close_nowrite,
-      Sinotify::OPEN => :open,
-      Sinotify::MOVED_FROM => :moved_from,
-      Sinotify::MOVED_TO => :moved_to,
-      Sinotify::DELETE => :delete,
-      Sinotify::DELETE_SELF => :delete_self,
-      Sinotify::MOVE_SELF => :move_self,
-      Sinotify::UNMOUNT => :unmount,
-      Sinotify::Q_OVERFLOW => :q_overflow,
-      Sinotify::IGNORED => :ignored,
-      Sinotify::CLOSE => :close,
-      Sinotify::MASK_ADD => :mask_add,
-      Sinotify::ISDIR => :isdir,
-      Sinotify::ONESHOT => :oneshot,
-      Sinotify::ALL_EVENTS => :all_events,
-    }
-    @@etype_to_mask_map = {}
-    @@mask_to_etype_map.each{|k,v| @@etype_to_mask_map[v] = k}
-    def self.etype_from_mask(mask)
-      @@mask_to_etype_map[mask]
-    end
-    def self.mask_from_etype(etype)
-      @@etype_to_mask_map[etype]
+    attr_reader :prim_event, :path, :timestamp, :is_dir
+
+    # Given a prim_event, and the Watch associated with the event's watch descriptor,
+    # return a Sinotify::Event. 
+    def self.from_prim_event_and_watch(prim_event, watch)
+      path = watch.path         # path for the watch associated w/ this even
+      is_dir = watch.directory? # original watch was on a dir or a file?
+
+      # This gets a little odd. The prim_event's 'name' field
+      # will be nil if the change was to a directory itself, or if
+      # the watch was on a file to begin with. However,
+      # when a watch is on a dir, but the event occurs on a file in that dir
+      # inotify sets the 'name' field to the file. Sinotify events do not
+      # play this game, only sending events for the thing that was altered
+      # in the first place. So right here is where we deduce if the 
+      # event was _really_ on a file or a dir.
+      if prim_event.name.nil?
+        path = File.join(path, prim_event.name) 
+        is_dir = false  
+      end
+
+      # is_dir must be passed along, since it may no longer exist (and thus cant be deduced later)
+      # inotify prim_events to not retain enough information to make it possible to deduce the
+      # original fullpath and whether it was a file or directory, so this info must be passed around.
+      return Sinotify::Event.new(:prim_event => prim_event,
+                                 :path => path,
+                                 :timestamp => Time.now, # any way to get this from prim event?
+                                 :is_dir => is_dir) 
     end
 
-    def self.all_etypes
-      @@mask_to_etype_map.values.sort{|e1,e2| e1.to_s <=> e2.to_s}
-    end
-
-    # Return whether this event has etype specified
-    def has_etype?(etype)
-      mask_for_etype = self.class.mask_from_etype(etype)
-      return (self.mask && mask_for_etype).eql?(self.mask)
-    end
-
-    def etypes
-      self.class.all_etypes.select{|et| self.has_etype?(et)}
-    end
-
-    def watch_descriptor
-      self.wd
+    def initializer(args={})
+      args.each{|k,v| self.self("#{k}=",v)}
+      @timestamp ||= Time.now
     end
 
     def inspect
-      "<#{self.class} :name => '#{self.name}', :etypes => #{self.etypes.inspect}, :mask => #{self.mask}, :watch_descriptor => #{self.watch_descriptor}>"
+      "<#{self.class} :path => '#{self.path}', :etypes => #{self.etypes.inspect}, :prim_event => #{self.prim_event.inspect}>"
+    end
+
+    # etype/mask functions delegated to prim_event, EXCEPT: when :delete_self is in 
+    # the list, and path is a directory, change it to 'delete'. If you want
+    # the etypes in the original prim_event, ask for event.prim_event.etypes
+    def etypes
+      if @etypes.nil?
+        @etypes = self.prim_event.etypes
+        if self.directory? and @etypes.include?(:delete_self)
+          @etypes.delete(:delete_self)
+          @etypes << :delete
+        end
+      end
+    end
+
+    def directory?
+      self.is_dir.eql?(true)
+    end
+
+    def has_etype? etype
+      self.etypes.include?(etype)
     end
 
   end
 
 end
-

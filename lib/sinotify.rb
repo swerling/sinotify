@@ -1,7 +1,7 @@
 module Sinotify
 
   # :stopdoc:
-  VERSION = '1.0.0'
+  VERSION = '0.1.0'
   LIBPATH = ::File.expand_path(::File.dirname(__FILE__)) + ::File::SEPARATOR
   PATH = ::File.dirname(LIBPATH) + ::File::SEPARATOR
   # :startdoc:
@@ -43,9 +43,14 @@ module Sinotify
 
 end  # module Sinotify
 
+
+#
+# Most of the methods above are bones-generated util methods. 
+# Now load up sinotify.
+#
+
 require 'rubygems'
-require File.join(File.dirname(__FILE__), '../ext/sinotify.so')
 require 'cosell'
+require File.join(File.dirname(__FILE__), '../ext/sinotify.so')
 Sinotify.require_all_libs_relative_to(__FILE__)
 
-# EOF

@@ -47,6 +47,8 @@ struct inotify_event {
 #define IN_MOVE			(IN_MOVED_FROM | IN_MOVED_TO) /* moves */
 
 /* special flags */
+#define IN_ONLYDIR		0x01000000	/* only watch the path if it is a directory */
+#define IN_DONT_FOLLOW		0x02000000	/* don't follow a sym link */
 #define IN_MASK_ADD		0x20000000	/* add to the mask of an already existing watch */
 #define IN_ISDIR		0x40000000	/* event occurred against dir */
 #define IN_ONESHOT		0x80000000	/* only send event once */
@@ -60,5 +62,52 @@ struct inotify_event {
 			 IN_CLOSE_NOWRITE | IN_OPEN | IN_MOVED_FROM | \
 			 IN_MOVED_TO | IN_DELETE | IN_CREATE | IN_DELETE_SELF | \
 			 IN_MOVE_SELF)
+
+#ifdef __KERNEL__
+
+#include <linux/dcache.h>
+#include <linux/fs.h>
+#include <linux/config.h>
+
+#ifdef CONFIG_INOTIFY
+
+extern void inotify_inode_queue_event(struct inode *, __u32, __u32,
+				      const char *);
+extern void inotify_dentry_parent_queue_event(struct dentry *, __u32, __u32,
+					      const char *);
+extern void inotify_unmount_inodes(struct list_head *);
+extern void inotify_inode_is_dead(struct inode *);
+extern u32 inotify_get_cookie(void);
+
+#else
+
+static inline void inotify_inode_queue_event(struct inode *inode,
+					     __u32 mask, __u32 cookie,
+					     const char *filename)
+{
+}
+
+static inline void inotify_dentry_parent_queue_event(struct dentry *dentry,
+						     __u32 mask, __u32 cookie,
+						     const char *filename)
+{
+}
+
+static inline void inotify_unmount_inodes(struct list_head *list)
+{
+}
+
+static inline void inotify_inode_is_dead(struct inode *inode)
+{
+}
+
+static inline u32 inotify_get_cookie(void)
+{
+	return 0;
+}
+
+#endif	/* CONFIG_INOTIFY */
+
+#endif	/* __KERNEL __ */
 
 #endif	/* _LINUX_INOTIFY_H */

@@ -163,7 +163,7 @@ static VALUE rb_inotify_close(VALUE self) {
 
 /*
  * call-seq: 
- *    inotify_event.inspect => "<Inotify::Event name=foo mask=0xdeadbeef wd=123>"
+ *    inotify_event.inspect => "<Sinotify::PrimEvent name=foo mask=0xdeadbeef wd=123>"
  *
  */
 
@@ -175,7 +175,7 @@ static VALUE rb_inotify_event_inspect(VALUE self) {
 	Data_Get_Struct(self, struct inotify_event, event);
 	len = event->len;
 	/ * TODO: Check for string getting truncated * /
-	pf = snprintf(buf, 1024, "<Inotify::Event name=%s mask=%ld wd=%d>", 
+	pf = snprintf(buf, 1024, "<Sinotify::PrimEvent name=%s mask=%ld wd=%d>", 
 	    event->name, event->mask, event->wd);
 	return rb_str_new2(buf);
 }
@@ -247,6 +247,8 @@ void Init_sinotify () {
 	rb_const_set(rb_cSinotify, rb_intern("IGNORED"), INT2NUM(IN_IGNORED));
 	rb_const_set(rb_cSinotify, rb_intern("CLOSE"), INT2NUM(IN_CLOSE));
 	rb_const_set(rb_cSinotify, rb_intern("MOVE"), INT2NUM(IN_MOVE));
+	rb_const_set(rb_cSinotify, rb_intern("ONLYDIR"), INT2NUM(IN_ONLYDIR));
+	rb_const_set(rb_cSinotify, rb_intern("DONT_FOLLOW"), INT2NUM(IN_DONT_FOLLOW));
 	rb_const_set(rb_cSinotify, rb_intern("MASK_ADD"), INT2NUM(IN_MASK_ADD));
 	rb_const_set(rb_cSinotify, rb_intern("ISDIR"), INT2NUM(IN_ISDIR));
 	rb_const_set(rb_cSinotify, rb_intern("ONESHOT"), INT2NUM(IN_ONESHOT));
@@ -259,9 +261,9 @@ void Init_sinotify () {
 	rb_define_method(rb_cNotifier, "close", rb_inotify_close, 0);
 
 
-  // The Inotify::Event class
+  // The Sinotify::PrimEvent class
   // (todo: get rid of inspect, move to ruby)
-	rb_cSinotifyEvent = rb_define_class_under(rb_cSinotify, "Event", rb_cObject);
+	rb_cSinotifyEvent = rb_define_class_under(rb_cSinotify, "PrimEvent", rb_cObject);
 	rb_define_method(rb_cSinotifyEvent, "name", rb_inotify_event_name, 0);
 	rb_define_method(rb_cSinotifyEvent, "wd", rb_inotify_event_wd, 0);
 	rb_define_method(rb_cSinotifyEvent, "mask", rb_inotify_event_mask, 0);
