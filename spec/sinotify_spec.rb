@@ -3,6 +3,9 @@ require File.join(File.dirname(__FILE__), %w[spec_helper])
 
 describe Sinotify do
   it "should properly create event mask from etypes" do
+    notifier = Sinotify::Notifier.new('/tmp', :recurse => false, :etypes => [:create, :modify])
+    notifier.raw_mask.should be_eql(Sinotify::CREATE | Sinotify::MODIFY)
+    lambda{Sinotify::Notifier.new('/tmp', :recurse => false, :etypes => [:blah])}.should raise_error
   end
   it "should properly create Event from PrimEvent" do
   end

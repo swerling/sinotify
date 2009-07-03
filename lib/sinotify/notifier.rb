@@ -47,9 +47,8 @@ module Sinotify
     #
     def initialize(file_or_dir_name, opts = {})
 
-      raise "Could not find #{file_or_dir_name}" unless File.exist(file_or_dir_name)
+      raise "Could not find #{file_or_dir_name}" unless File.exist?(file_or_dir_name)
       self.file_or_dir_name = file_or_dir_name
-      self.parent = opts[:parent]
 
       # by default, recurse if directory?. If opts[:recurse] was true and passed in,
       # make sure the watch is on a directory
@@ -70,6 +69,11 @@ module Sinotify
       self.closed = false
     end
     
+    def validate_etypes!
+      bad = self.etypes.detect{|etype| PrimEvent.mask_from_etype(etype).nil? }
+      raise "Unrecognized etype '#{bad}'. Please see valid list in docs for Sinotify::Event" if bad
+    end
+
     def on_directory?
       File.directory?(self.file_or_dir_name)
     end
@@ -129,11 +133,11 @@ module Sinotify
       self.remove_all_watches
     end
 
-    protected
+    def raw_mask
+      @raw_mask ||= self.etypes.inject(0){|raw, etype| raw | PrimEvent.mask_from_etype(etype) }
+    end
 
-      def self.raw_mask
-        raise "TODO: generate raw mask from emasks"
-      end
+    protected
 
       def watches
         @watches ||= {}
