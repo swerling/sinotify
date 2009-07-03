@@ -61,7 +61,7 @@ module Sinotify
   #
   class Event
 
-    attr_reader :prim_event, :path, :timestamp, :is_dir
+    attr_accessor :prim_event, :path, :timestamp, :is_dir
 
     # Given a prim_event, and the Watch associated with the event's watch descriptor,
     # return a Sinotify::Event. 
@@ -77,7 +77,7 @@ module Sinotify
       # play this game, only sending events for the thing that was altered
       # in the first place. So right here is where we deduce if the 
       # event was _really_ on a file or a dir.
-      if prim_event.name.nil?
+      unless prim_event.name.nil?
         path = File.join(path, prim_event.name) 
         is_dir = false  
       end
@@ -91,8 +91,8 @@ module Sinotify
                                  :is_dir => is_dir) 
     end
 
-    def initializer(args={})
-      args.each{|k,v| self.self("#{k}=",v)}
+    def initialize(args={})
+      args.each{|k,v| self.send("#{k}=",v)}
       @timestamp ||= Time.now
     end
 
@@ -111,6 +111,7 @@ module Sinotify
           @etypes << :delete
         end
       end
+      @etypes
     end
 
     def directory?

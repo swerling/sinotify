@@ -43,7 +43,7 @@ module Sinotify
     #      See docs for Sinotify::Event for list of event types.
     #      default is :all_types
     #    :logger => 
-    #      Where to log to. Default is nil.
+    #      Where to log to. Default is Logger.new(STDOUT).
     #
     def initialize(file_or_dir_name, opts = {})
 
@@ -64,6 +64,7 @@ module Sinotify
       self.prim_notifier = Sinotify::PrimNotifier.new
 
       # setup async announcements queue (part of the Cosell mixin)
+      logger = opts[:logger] || Logger.new(STDOUT)
       self.queue_announcements!(:sleep_time => 0.1, :logger => opts[:logger], :announcements_per_cycle => 5)
 
       self.closed = false
@@ -159,6 +160,10 @@ module Sinotify
 
       def remove_all_watches
         self.watches.keys.each{|watch_descriptor| self.remove_watch(fn) }
+      end
+
+      def log msg, level
+        self.logger.send(level, msg) if self.logger
       end
 
       # ruby gives warnings in verbose mode if you use attr_accessor to set these next few: 

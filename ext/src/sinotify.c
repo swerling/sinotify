@@ -264,8 +264,8 @@ void Init_sinotify () {
   // The Sinotify::PrimEvent class
   // (todo: get rid of inspect, move to ruby)
 	rb_cSinotifyEvent = rb_define_class_under(rb_cSinotify, "PrimEvent", rb_cObject);
-	rb_define_method(rb_cSinotifyEvent, "name", rb_inotify_event_name, 0);
-	rb_define_method(rb_cSinotifyEvent, "wd", rb_inotify_event_wd, 0);
-	rb_define_method(rb_cSinotifyEvent, "mask", rb_inotify_event_mask, 0);
+	rb_define_method(rb_cSinotifyEvent, "prim_name", rb_inotify_event_name, 0);
+	rb_define_method(rb_cSinotifyEvent, "prim_wd", rb_inotify_event_wd, 0);
+	rb_define_method(rb_cSinotifyEvent, "prim_mask", rb_inotify_event_mask, 0);
 
 }

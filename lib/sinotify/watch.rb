@@ -6,8 +6,8 @@ module Sinotify
   #
   class Watch 
     attr_accessor :is_dir, :path, :watch_descriptor
-    def initializer(args={})
-      args.each{|k,v| self.self("#{k}=",v)}
+    def initialize(args={})
+      args.each{|k,v| self.send("#{k}=",v)}
       @timestamp ||= Time.now
       @is_dir = File.directory?(path)
     end

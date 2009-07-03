@@ -72,6 +72,18 @@ module Sinotify
       @@mask_to_etype_map.values.sort{|e1,e2| e1.to_s <=> e2.to_s}
     end
 
+    def name
+      @name ||= self.prim_name
+    end
+
+    def wd
+      @wd ||= self.prim_wd
+    end
+
+    def mask
+      @mask ||= self.prim_mask
+    end
+
     # Return whether this event has etype specified
     def has_etype?(etype)
       mask_for_etype = self.class.mask_from_etype(etype)
@@ -79,7 +91,7 @@ module Sinotify
     end
 
     def etypes
-      self.class.all_etypes.select{|et| self.has_etype?(et)}
+      @etypes ||= self.class.all_etypes.select{|et| self.has_etype?(et) }
     end
 
     def watch_descriptor
