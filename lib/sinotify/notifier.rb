@@ -21,7 +21,7 @@ module Sinotify
   class Notifier
     include Cosell
 
-    attr_accessor :file_or_dir_name, :etypes, :recurse, :recurse_throttle
+    attr_accessor :file_or_dir_name, :etypes, :recurse, :recurse_throttle, :logger
 
     #  Required Args
     #
@@ -43,7 +43,7 @@ module Sinotify
     #      See docs for Sinotify::Event for list of event types.
     #      default is :all_types
     #    :logger => 
-    #      Where to log to. Default is Logger.new(STDOUT).
+    #      Where to log errors to. Default is Logger.new(STDOUT).
     #
     def initialize(file_or_dir_name, opts = {})
 
@@ -64,7 +64,7 @@ module Sinotify
       self.prim_notifier = Sinotify::PrimNotifier.new
 
       # setup async announcements queue (part of the Cosell mixin)
-      logger = opts[:logger] || Logger.new(STDOUT)
+      @logger = opts[:logger] || Logger.new(STDOUT)
       self.queue_announcements!(:sleep_time => 0.1, :logger => opts[:logger], :announcements_per_cycle => 5)
 
       self.closed = false
@@ -81,44 +81,44 @@ module Sinotify
 
     def watch!
       raise "Already watching!" unless @watch_thread.nil?
-      raise "Cannot reopen an inotifier. Create a new one instead" if self.closed
+      raise "Cannot reopen an inotifier. Create a new one instead" if self.closed?
 
-      Thread.new { self.add_watches! } # add subdirectories in the background
+      # add subdirectories in the background
+      @child_dir_thread = Thread.new do 
+        begin
+          self.add_watches! 
+        rescue Exception => x
+          log "Exception: #{x}, trace: \n\t#{x.backtrace.join("\n\t")}", :error 
+        end
+      end 
 
       @watch_thread = Thread.new do
-        @inotify.each_event do |prim_event|
-          watch = self.watches[prim_event.watch_descriptor]
-          if watch.nil?
-          self.log "Could not determine watch descriptor for event, something is wrong. Event: #{prim_event.inspect}", :warn
-          else
-            event = Sinotify::Event.from_prim_event_and_watch(prim_event, watch)
-            event = self.announce event
-            self.add_watch(path) if event.has_etype?(:create) and File.directory?(event.path)
-            break if closed?
-          end
+        begin
+          self.prim_notifier.each_event do |prim_event|
+            if event_is_noise?(prim_event)
+              @spy_logger.debug("Sinotify::Notifier Spy: Skipping noise[#{prim_event.inspect}]") if @spy_logger
+            else
+              spy_on_event(prim_event)
+              watch = self.watches[prim_event.watch_descriptor]
+              if watch.nil?
+                self.log "Could not determine watch from descriptor #{prim_event.watch_descriptor}, something is wrong. Event: #{prim_event.inspect}", :warn
+              else
+                event = Sinotify::Event.from_prim_event_and_watch(prim_event, watch)
+                self.announce event
+                self.add_watch(event.path) if event.has_etype?(:create) && event.directory?
+                self.remove_watch(event.watch_descriptor) if event.has_etype?(:delete) && event.directory?
+                break if closed?
+              end
+            end
+        end
+        rescue Exception => x
+          log "Exception: #{x}, trace: \n\t#{x.backtrace.join("\n\t")}", :error 
+        end
+
         puts "-----------exiting thread for #{self}"
-        end
-      end
-    end
-
-    def add_watches!(fn = self.file_or_dir_name, throttle = 0)
-
-      return if closed?
-
-      if throttle.eql?(self.recurse_throttle)
-        sleep 0.1
-        throttle = 0
-      end
-      throttle += 1
-
-      self.add_watch(fn)
-
-      if recurse?
-        Dir[File.join(fn, '/**')].each do |child_fn|
-          self.add_watches!(child_fn, throttle) if File.directory?(child_fn)
-        end
       end
 
+      return self
     end
 
     def recurse?
@@ -138,21 +138,72 @@ module Sinotify
       @raw_mask ||= self.etypes.inject(0){|raw, etype| raw | PrimEvent.mask_from_etype(etype) }
     end
 
+    def all_directories_being_watched
+      self.watches.values.collect{|w| w.path }
+    end
+
+    def watches
+      @watches ||= {}
+    end
+
+    # Log a message every time a prim_event comes in (will be logged even if it is considered 'noise'),
+    # and log a message whenever an event is announced.
+    # Options:
+    #    :logger => The log to log to. Default is a logger on STDOUT
+    #    :level => The log level to log with. Default is :info
+    def spy!(opts = {})
+      @spy_logger = opts[:logger] || Logger.new(STDOUT)
+      @spy_logger_level = opts[:level] || :info
+      opts[:on] = Sinotify::Event
+      opts[:preface_with] = "Sinotify::Notifier Event Spy"
+      super(opts)
+    end
+
     protected
 
-      def watches
-        @watches ||= {}
+      # some events we don't want to report (certain events are generated just from creating watches)
+      def event_is_noise? prim_event
+
+        etypes_strings = prim_event.etypes.map{|e|e.to_s}.sort
+
+        # the simple act of creating a watch causes these to fire"
+        return true if ["close_nowrite", "isdir"].eql?(etypes_strings)
+        return true if ["isdir", "open"].eql?(etypes_strings)
+        return true if ["ignored"].eql?(etypes_strings)
+
+        return false
+      end
+
+      def add_watches!(fn = self.file_or_dir_name, throttle = 0)
+
+        return if closed?
+        if throttle.eql?(self.recurse_throttle)
+          sleep 0.1
+          throttle = 0
+        end
+        throttle += 1
+
+        self.add_watch(fn)
+
+        if recurse?
+          Dir[File.join(fn, '/**')].each do |child_fn|
+            next if child_fn.eql?(fn)
+            self.add_watches!(child_fn, throttle) if File.directory?(child_fn)
+          end
+        end
+
       end
 
       def add_watch(fn)
         watch_descriptor = self.prim_notifier.add_watch(fn, self.raw_mask)
-        remove_watch[watch_descriptor] # remove the existing, if it exists
+        remove_watch(watch_descriptor) # remove the existing, if it exists
         watch = Watch.new(:path => fn, :watch_descriptor => watch_descriptor)
         self.watches[watch_descriptor] = watch
       end
 
-      def remove_watch_descriptor(watch_descriptor)
-        self.watches.delete[watch_descriptor]
+      # Remove the watch associated with the watch_descriptor passed in
+      def remove_watch(watch_descriptor)
+        self.watches.delete(watch_descriptor)
         # the prim_notifier will complain if we remove a watch on a deleted file.
         # we don't care -- we're only removing the watch to be on the safe side
         self.prim_notifier.remove_watch(watch_descriptor) rescue nil
@@ -162,8 +213,16 @@ module Sinotify
         self.watches.keys.each{|watch_descriptor| self.remove_watch(fn) }
       end
 
-      def log msg, level
+      def log(msg, level = :debug)
+        puts(msg) unless [:debug, :info].include?(level)
         self.logger.send(level, msg) if self.logger
+      end
+
+      def spy_on_event(prim_event)
+        if @spy_logger
+          msg = "Sinotify::Notifier Prim Event Spy: #{prim_event.inspect}"
+          @spy_logger.send(@spy_logger_level, msg)
+        end
       end
 
       # ruby gives warnings in verbose mode if you use attr_accessor to set these next few: 

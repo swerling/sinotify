@@ -60,6 +60,10 @@ module Sinotify
     @@etype_to_mask_map = {}
     @@mask_to_etype_map.each{|k,v| @@etype_to_mask_map[v] = k}
 
+#    def self.etype_from_mask(mask)
+#      @@mask_to_etype_map[mask]
+#    end
+
     def self.etype_from_mask(mask)
       @@mask_to_etype_map[mask]
     end
@@ -84,10 +88,16 @@ module Sinotify
       @mask ||= self.prim_mask
     end
 
+    # When first creating a watch, inotify sends a bunch of events that have masks
+    # don't seem to match up w/ any of the masks defined in inotify.h. Pass on those.
+    def recognized?
+      return !self.etypes.empty?
+    end
+
     # Return whether this event has etype specified
     def has_etype?(etype)
       mask_for_etype = self.class.mask_from_etype(etype)
-      return (self.mask && mask_for_etype).eql?(self.mask)
+      return (self.mask & mask_for_etype).eql?(mask_for_etype)
     end
 
     def etypes
@@ -99,7 +109,7 @@ module Sinotify
     end
 
     def inspect
-      "<#{self.class} :name => '#{self.name}', :etypes => #{self.etypes.inspect}, :mask => #{self.mask}, :watch_descriptor => #{self.watch_descriptor}>"
+      "<#{self.class} :name => '#{self.name}', :etypes => #{self.etypes.inspect}, :mask => #{self.mask.to_s(16)}, :watch_descriptor => #{self.watch_descriptor}>"
     end
 
   end

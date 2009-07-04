@@ -73,13 +73,14 @@ module Sinotify
       # will be nil if the change was to a directory itself, or if
       # the watch was on a file to begin with. However,
       # when a watch is on a dir, but the event occurs on a file in that dir
-      # inotify sets the 'name' field to the file. Sinotify events do not
+      # inotify sets the 'name' field to the file. :isdir will be in the etypes
+      # if that file happens to be a subdir. Sinotify events do not
       # play this game, only sending events for the thing that was altered
       # in the first place. So right here is where we deduce if the 
       # event was _really_ on a file or a dir.
       unless prim_event.name.nil?
         path = File.join(path, prim_event.name) 
-        is_dir = false  
+        is_dir = prim_event.etypes.include?(:isdir)
       end
 
       # is_dir must be passed along, since it may no longer exist (and thus cant be deduced later)
@@ -96,9 +97,12 @@ module Sinotify
       @timestamp ||= Time.now
     end
 
-    def inspect
-      "<#{self.class} :path => '#{self.path}', :etypes => #{self.etypes.inspect}, :prim_event => #{self.prim_event.inspect}>"
+    def inspect_or_to_s(show_prim_event = false)
+      prim_event = (show_prim_event)? ", :prim_event => #{self.prim_event.inspect}" : ''
+      "<#{self.class} :path => '#{self.path}', dir? => #{self.directory?}, :etypes => #{self.etypes.inspect rescue 'could not determine'}#{prim_event}>"
     end
+    def to_s; self.inspect_or_to_s(false); end
+    def inspect; self.inspect_or_to_s(true); end
 
     # etype/mask functions delegated to prim_event, EXCEPT: when :delete_self is in 
     # the list, and path is a directory, change it to 'delete'. If you want
@@ -106,10 +110,18 @@ module Sinotify
     def etypes
       if @etypes.nil?
         @etypes = self.prim_event.etypes
+
+        # change :delete_self into :delete 
         if self.directory? and @etypes.include?(:delete_self)
           @etypes.delete(:delete_self)
           @etypes << :delete
         end
+
+        # add :close if :close_write or :close_nowrite are there, but :close is not
+        if @etypes.include?(:close_write) || @etypes.include?(:close_nowrite)
+          (@etypes << :close) unless @etypes.include?(:close)
+        end
+
       end
       @etypes
     end
@@ -120,6 +132,10 @@ module Sinotify
 
     def has_etype? etype
       self.etypes.include?(etype)
+    end
+
+    def watch_descriptor
+      self.prim_event.watch_descriptor
     end
 
   end
