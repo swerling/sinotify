@@ -177,6 +177,64 @@ describe Sinotify do
     notifier.all_directories_being_watched.size.should be_eql(0) # all watches should have been deleted
   end
 
+  it "pound it" do
+    # Setup (create the usual test dir and 26 subdirs, and an additional sub-subdir, and a file
+    reset_test_dir! # creates the root dir and 'a'...'z'
+
+    a_z = ('a'..'z').collect{|x|x}
+
+    # Setup: create the notifier
+    notifier = Sinotify::Notifier.new(@test_root_dir, 
+                                      :announcements_sleep_time => 0.01,
+                                      :announcements_per_cycle => 10000,
+                                      :etypes => [:create, :modify, :delete, :close],
+                                      :recurse => true).watch!
+    #notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
+    creates = deletes = modifies = closes = 0
+    notifier.when_announcing(Sinotify::Event) do |event|  
+      creates += 1 if event.etypes.include?(:create) 
+      deletes += 1 if event.etypes.include?(:delete) 
+      modifies += 1 if event.etypes.include?(:modify) 
+      closes += 1 if event.etypes.include?(:close) 
+    end
+
+    total_iterations = 1000
+    dirs_used = []
+    total_iterations.times do 
+      sub_dir = File.join(@test_root_dir, a_z[rand(a_z.size)])
+      dirs_used << sub_dir
+      test_fn = File.join(sub_dir, "zzz#{rand(10000)}")
+      FileUtils.touch test_fn
+      File.open(test_fn, 'a'){|f| f << rand(1000).to_s }
+      FileUtils.rm test_fn
+    end
+    dirs_used.uniq!
+    puts "created and modified and deleted #{total_iterations} files in #{dirs_used.size} sub directories of #{@test_root_dir}"
+
+    start_wait = Time.now
+
+    # wait up to 15 seconds for all the create events to come through
+    waits = 0
+    puts "Waiting for events, will wait for up to 30 sec"
+    while(creates < total_iterations) do
+      sleep 1
+      waits += 1
+      raise "Tired of waiting for create events to reach #{total_iterations}, it is only at #{creates}" if waits > 30
+    end
+    puts "It took #{Time.now - start_wait} seconds for all the create/modify/delete/close events to come through"
+
+    pause! # give it a tiny bit longer to let any remaining modify/delete events stragglers to come through
+
+    puts "Ceates detected: #{creates}"
+    puts "Deletes: #{deletes}"
+    puts "Modifies: #{modifies}"
+    puts "Closes: #{closes}"
+    creates.should be_eql(total_iterations) 
+    deletes.should be_eql(total_iterations) 
+    modifies.should be_eql(total_iterations) 
+    closes.should be_eql(2 * total_iterations) # should get a close both after the create and the modify
+  end
+
 end
 
 # EOF

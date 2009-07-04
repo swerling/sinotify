@@ -47,7 +47,7 @@ module Sinotify
     #
     def initialize(file_or_dir_name, opts = {})
 
-      initialize_cosell!  # so cosell can init its variables
+      initialize_cosell!  # init the announcements framework
 
       raise "Could not find #{file_or_dir_name}" unless File.exist?(file_or_dir_name)
       self.file_or_dir_name = file_or_dir_name
@@ -67,7 +67,11 @@ module Sinotify
 
       # setup async announcements queue (part of the Cosell mixin)
       @logger = opts[:logger] || Logger.new(STDOUT)
-      self.queue_announcements!(:sleep_time => 0.1, :logger => opts[:logger], :announcements_per_cycle => 5)
+      sleep_time = opts[:announcements_sleep_time] || 0.05 # undocumented for now
+      announcements_per_cycle = opts[:announcements_per_cycle] || 50 # undocumented for now
+      self.queue_announcements!(:sleep_time => sleep_time, 
+                                :logger => opts[:logger], 
+                                :announcements_per_cycle => announcements_per_cycle)
 
       self.closed = false
 
@@ -113,7 +117,6 @@ module Sinotify
               else
                 event = Sinotify::Event.from_prim_event_and_watch(prim_event, watch)
                 self.announce event
-#puts "ADDING: #{event.inspect}, WATCH: #{self.watches[event.watch_descriptor.to_s]}" if event.has_etype?(:create) && event.directory?
                 if event.has_etype?(:create) && event.directory?
                   Thread.new do 
                     # have to thread this because the :create event comes in _before_ the directory exists,
@@ -132,7 +135,7 @@ module Sinotify
           log "Exception: #{x}, trace: \n\t#{x.backtrace.join("\n\t")}", :error 
         end
 
-        puts "-----------exiting thread for #{self}"
+        log "Exiting thread for #{self}"
       end
 
       return self
