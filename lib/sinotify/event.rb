@@ -95,6 +95,9 @@ module Sinotify
     def initialize(args={})
       args.each{|k,v| self.send("#{k}=",v)}
       @timestamp ||= Time.now
+
+      # initialize a few variables just to shut up the ruby warnings
+      @etypes = nil
     end
 
     def inspect_or_to_s(show_prim_event = false)

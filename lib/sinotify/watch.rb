@@ -14,5 +14,8 @@ module Sinotify
     def directory?
       self.is_dir.eql?(true)
     end
+    def to_s
+      "Sinotify::Watch[:is_dir => #{is_dir}, :path => #{path}, :watch_descriptor => #{watch_descriptor}]"
+    end
   end
 end

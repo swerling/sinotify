@@ -47,6 +47,8 @@ module Sinotify
     #
     def initialize(file_or_dir_name, opts = {})
 
+      initialize_cosell!  # so cosell can init its variables
+
       raise "Could not find #{file_or_dir_name}" unless File.exist?(file_or_dir_name)
       self.file_or_dir_name = file_or_dir_name
 
@@ -68,6 +70,12 @@ module Sinotify
       self.queue_announcements!(:sleep_time => 0.1, :logger => opts[:logger], :announcements_per_cycle => 5)
 
       self.closed = false
+
+      # initialize a few variables just to shut up the ruby warnings
+      # Apparently the lazy init idiom using ||= is no longer approved of. Shame that.
+      @spy_logger = nil
+      @spy_logger_level = nil
+      @watch_thread = nil
     end
     
     def validate_etypes!
@@ -95,17 +103,26 @@ module Sinotify
       @watch_thread = Thread.new do
         begin
           self.prim_notifier.each_event do |prim_event|
-            if event_is_noise?(prim_event)
+            watch = self.watches[prim_event.watch_descriptor.to_s]
+            if event_is_noise?(prim_event, watch)
               @spy_logger.debug("Sinotify::Notifier Spy: Skipping noise[#{prim_event.inspect}]") if @spy_logger
             else
               spy_on_event(prim_event)
-              watch = self.watches[prim_event.watch_descriptor]
               if watch.nil?
                 self.log "Could not determine watch from descriptor #{prim_event.watch_descriptor}, something is wrong. Event: #{prim_event.inspect}", :warn
               else
                 event = Sinotify::Event.from_prim_event_and_watch(prim_event, watch)
                 self.announce event
-                self.add_watch(event.path) if event.has_etype?(:create) && event.directory?
+#puts "ADDING: #{event.inspect}, WATCH: #{self.watches[event.watch_descriptor.to_s]}" if event.has_etype?(:create) && event.directory?
+                if event.has_etype?(:create) && event.directory?
+                  Thread.new do 
+                    # have to thread this because the :create event comes in _before_ the directory exists,
+                    # and inotify will not permit a watch on a file unless it exists
+                    sleep 0.1
+                    self.add_watch(event.path)
+                  end
+                end
+                # puts "REMOVING: #{event.inspect}, WATCH: #{self.watches[event.watch_descriptor.to_s]}" if event.has_etype?(:delete) && event.directory?
                 self.remove_watch(event.watch_descriptor) if event.has_etype?(:delete) && event.directory?
                 break if closed?
               end
@@ -162,7 +179,7 @@ module Sinotify
     protected
 
       # some events we don't want to report (certain events are generated just from creating watches)
-      def event_is_noise? prim_event
+      def event_is_noise? prim_event, watch
 
         etypes_strings = prim_event.etypes.map{|e|e.to_s}.sort
 
@@ -170,6 +187,11 @@ module Sinotify
         return true if ["close_nowrite", "isdir"].eql?(etypes_strings)
         return true if ["isdir", "open"].eql?(etypes_strings)
         return true if ["ignored"].eql?(etypes_strings)
+
+        # If the event is on a subdir of the directory specified in watch, don't send it because
+        # there should be another even (on the subdir itself) that comes through, and this one
+        # will be redundant. 
+        return true if ["delete", "isdir"].eql?(etypes_strings)
 
         return false
       end
@@ -196,21 +218,23 @@ module Sinotify
 
       def add_watch(fn)
         watch_descriptor = self.prim_notifier.add_watch(fn, self.raw_mask)
+        # puts "ADDED WATCH: #{watch_descriptor} for #{fn}"
         remove_watch(watch_descriptor) # remove the existing, if it exists
         watch = Watch.new(:path => fn, :watch_descriptor => watch_descriptor)
-        self.watches[watch_descriptor] = watch
+        self.watches[watch_descriptor.to_s] = watch
       end
 
       # Remove the watch associated with the watch_descriptor passed in
       def remove_watch(watch_descriptor)
-        self.watches.delete(watch_descriptor)
+        # puts "REMOVING: #{watch_descriptor}"
+        self.watches.delete(watch_descriptor.to_s)
         # the prim_notifier will complain if we remove a watch on a deleted file.
         # we don't care -- we're only removing the watch to be on the safe side
         self.prim_notifier.remove_watch(watch_descriptor) rescue nil
       end
 
       def remove_all_watches
-        self.watches.keys.each{|watch_descriptor| self.remove_watch(fn) }
+        self.watches.keys.each{|watch_descriptor| self.remove_watch(watch_descriptor) }
       end
 
       def log(msg, level = :debug)

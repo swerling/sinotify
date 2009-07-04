@@ -9,10 +9,18 @@ describe Sinotify do
 
   # A lot of Sinotify work occurs in background threads (eg. adding watches, adding subdirectories),
   # so the tests may insert a tiny pause to allow the bg threads to do their thing before making
-  # any assertions
-  def tiny_pause!; sleep 0.01; end
-  def pause!; sleep 0.1; end
-  def big_pause!; sleep 1; end
+  # any assertions. 
+  def tiny_pause!; sleep 0.05; end
+  def pause!; sleep 0.5; end
+  def big_pause!; sleep 1.5; end
+
+  def reset_test_dir!
+    raise 'not gonna happen' unless @test_root_dir =~ /\/tmp\//
+    FileUtils.rm_rf(@test_root_dir)
+    FileUtils.mkdir(@test_root_dir)
+    ('a'..'z').each{|ch| FileUtils.mkdir(File.join(@test_root_dir, ch))}
+    pause!
+  end
 
   before(:each) do
     @test_root_dir = '/tmp/sinotifytestdir'
@@ -45,12 +53,8 @@ describe Sinotify do
   end
 
   it "should add watches for all child directories if recursive, and get rid of them all on close" do
-    raise 'not gonna happen' unless @test_root_dir =~ /\/tmp\//
 
-    # setup: make a bunch of directories under /tmp/sinotifytestdir
-    FileUtils.rm_rf(@test_root_dir)
-    FileUtils.mkdir(@test_root_dir)
-    ('a'..'z').each{|ch| FileUtils.mkdir(File.join(@test_root_dir, ch))}
+    reset_test_dir!
 
     # make a watch, recurse false. There should only be one watch
     notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => false).watch!
@@ -95,30 +99,58 @@ describe Sinotify do
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:delete) }.should_not be_nil
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:create) }.should_not be_nil
 
-    # remove the subdir altogether
-    # leftover watches should be 26 (@test_root_dir, its 26 subdirs (a-z) minus 'a', which was just deleted)
-    events = []
-    subdir_a = File.join(@test_root_dir, 'a')
-    FileUtils.rm_rf subdir_a
-    pause!
-    #puts events.map{|e|e.to_s}.join("\n")
-    events.detect{|e| e.path.eql?(subdir_a) && e.directory? && e.etypes.include?(:delete) }.should_not be_nil
-    events.detect{|e| e.path.eql?(test_fn) && !e.directory? && e.etypes.include?(:delete) }.should_not be_nil
-    #puts notifier.all_directories_being_watched.sort.inspect
-    notifier.all_directories_being_watched.size.should be_eql(25)
-
   end
 
-  it "should delete and close watches for all deleted files" do
+  it "should add a watch when a new subdirectory is created" do
+    # setup
+    reset_test_dir! # creates 27 directories, the root dir and 'a'...'z'
+    subdir_a = File.join(@test_root_dir, 'a')
+    events = []
+    notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
+    notifier.spy!(:logger => spylog = Logger.new('/tmp/spy.log'))
+    notifier.when_announcing(Sinotify::Event) { |event|  events << event }
+
+    # one watch for the root and the 26 subdirs 'a'..'z'
+    notifier.all_directories_being_watched.size.should be_eql(27) 
+
+    # create a new subdir
+    FileUtils.mkdir File.join(@test_root_dir, 'a', 'abc')
+    big_pause! # takes a moment to sink in because the watch is added in a bg thread
+    notifier.all_directories_being_watched.size.should be_eql(28) 
+    pause!
   end
 
   it "should delete watches for on subdirectires when a parent directory is deleted" do
-  end
 
-  it "should delete and close watches on deleted directories" do
+    # Setup (create the usual test dir and 26 subdirs, and an additional sub-subdir, and a file
+    reset_test_dir! # creates the root dir and 'a'...'z'
+    subdir_a = File.join(@test_root_dir, 'a')
+    FileUtils.mkdir File.join(@test_root_dir, 'a', 'def')
+    test_fn = File.join(subdir_a, 'hi')
+    FileUtils.touch test_fn
+
+    # Setup: create the notifier
+    events = []
+    notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
+    #notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
+    notifier.when_announcing(Sinotify::Event) { |event|  events << event }
+
+    # first assert: all directories should have a watch
+    pause!
+    notifier.all_directories_being_watched.size.should be_eql(28) # all the directories should have watches
+
+
+    # Should get delete events for the subdir_a and its file 'hi' when removing subdir_a.
+    # There should be 26 watches left (after removing watches for subdir_a and its sub-subdir)
+    FileUtils.rm_rf subdir_a
+    pause!
+    events.detect{|e| e.path.eql?(subdir_a) && e.directory? && e.etypes.include?(:delete) }.should_not be_nil
+    events.detect{|e| e.path.eql?(test_fn) && !e.directory? && e.etypes.include?(:delete) }.should_not be_nil
+    notifier.all_directories_being_watched.size.should be_eql(26)
   end
 
   it "should exit and nil out watch_thread when closed" do
+    # really need this?
   end
 
   it "should close children when closed if recursive" do

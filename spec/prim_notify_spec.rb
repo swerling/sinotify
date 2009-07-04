@@ -31,7 +31,7 @@ describe Sinotify::PrimNotifier do
         ev.mask.should be_eql(Sinotify::CREATE)
         ev.has_etype?(:create).should be_true
         ev.etypes.size.should be_eql(1) 
-        ev.inspect.should be_eql "<Sinotify::PrimEvent :name => 'sinotify-test', :etypes => [:create], :mask => 256, :watch_descriptor => 1>"
+        ev.inspect.should be_eql "<Sinotify::PrimEvent :name => 'sinotify-test', :etypes => [:create], :mask => 100, :watch_descriptor => 1>"
         break
       end
       FileUtils.rm_f test_fn
