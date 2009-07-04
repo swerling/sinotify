@@ -5,6 +5,13 @@ class MockPrimEvent
   attr_accessor :etypes, :mask, :wd, :name
 end
 
+#
+#  WARNING: These tests are a bit brittle. They depend on events taking place in threads as a result
+#  of filesytem events (inotify events). Sometimes the file system events dont come in as fast as
+#  desirable for the test, or sometimes ruby threads themselves may not get scheduled fast enough.
+#  If a test is failing on your system, it may start to succeed if you increase the values
+#  in tiny_pause!, pause!, or big_pause! methods below. 
+#
 describe Sinotify do
 
   # A lot of Sinotify work occurs in background threads (eg. adding watches, adding subdirectories),
@@ -52,7 +59,7 @@ describe Sinotify do
     event.etypes.should be_include(:close)
   end
 
-  it "should add watches for all child directories if recursive, and get rid of them all on close" do
+  it "should add watches for all child directories if recursive" do
 
     reset_test_dir!
 
@@ -63,11 +70,8 @@ describe Sinotify do
     notifier.all_directories_being_watched.should be_eql([@test_root_dir])
 
     # make a watch, recurse TRUE. There should only be 27 watches (a-z, and @test_root_dir)
-    spylog = Logger.new('/tmp/spy.log')
-    spylog.level = Logger::DEBUG
     notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
-    notifier.spy!(:logger => spylog)
-    #puts "------------#{notifier.all_directories_being_watched.inspect}"
+    # notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
 
     pause!
     notifier.all_directories_being_watched.size.should be_eql(27)
@@ -98,7 +102,6 @@ describe Sinotify do
     pause!
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:delete) }.should_not be_nil
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:create) }.should_not be_nil
-
   end
 
   it "should add a watch when a new subdirectory is created" do
@@ -107,7 +110,7 @@ describe Sinotify do
     subdir_a = File.join(@test_root_dir, 'a')
     events = []
     notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
-    notifier.spy!(:logger => spylog = Logger.new('/tmp/spy.log'))
+    # notifier.spy!(:logger => spylog = Logger.new('/tmp/spy.log'))
     notifier.when_announcing(Sinotify::Event) { |event|  events << event }
 
     # one watch for the root and the 26 subdirs 'a'..'z'
