@@ -225,16 +225,23 @@ module Sinotify
       end
 
       # Remove the watch associated with the watch_descriptor passed in
-      def remove_watch(watch_descriptor)
-        # puts "REMOVING: #{watch_descriptor}"
-        self.watches.delete(watch_descriptor.to_s)
-        # the prim_notifier will complain if we remove a watch on a deleted file.
-        # we don't care -- we're only removing the watch to be on the safe side
-        self.prim_notifier.remove_watch(watch_descriptor) rescue nil
+      def remove_watch(watch_descriptor, prim_remove = false)
+        if watches[watch_descriptor.to_s]
+          # puts "REMOVING: #{watch_descriptor}"
+          self.watches.delete(watch_descriptor.to_s)
+
+          # the prim_notifier will complain if we remove a watch on a deleted file,
+          # since the watch will have automatically been removed already. Be default we
+          # don't care, but if caller is sure there are some prim watches to clean
+          # up, then they can pass 'true' for prim_remove. Another way to handle
+          # this would be to just default to true and fail silently, but trying this
+          # more conservative approach for now.
+          self.prim_notifier.rm_watch(watch_descriptor.to_i) if prim_remove
+        end
       end
 
       def remove_all_watches
-        self.watches.keys.each{|watch_descriptor| self.remove_watch(watch_descriptor) }
+        self.watches.keys.each{|watch_descriptor| self.remove_watch(watch_descriptor, true) }
       end
 
       def log(msg, level = :debug)

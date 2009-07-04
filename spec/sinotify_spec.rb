@@ -86,6 +86,7 @@ describe Sinotify do
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:create) }.should_not be_nil
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:open) }.should_not be_nil
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:close_write) }.should_not be_nil
+    events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:close) }.should_not be_nil
 
     events = []
     File.open(test_fn, 'a'){|f| f << 'ho'}
@@ -93,6 +94,7 @@ describe Sinotify do
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:open) }.should_not be_nil
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:modify) }.should_not be_nil
     events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:close_write) }.should_not be_nil
+    events.detect{|e| e.path.eql?(test_fn) && e.etypes.include?(:close) }.should_not be_nil
 
     # quickly create and delete the file
     events = []
@@ -157,6 +159,22 @@ describe Sinotify do
   end
 
   it "should close children when closed if recursive" do
+    # Setup (create the usual test dir and 26 subdirs, and an additional sub-subdir, and a file
+    reset_test_dir! # creates the root dir and 'a'...'z'
+    FileUtils.mkdir File.join(@test_root_dir, 'a', 'def')
+
+    # Setup: create the notifier
+    events = []
+    notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
+    #notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
+    notifier.when_announcing(Sinotify::Event) { |event|  events << event }
+
+    # first assert: all directories should have a watch
+    pause!
+    notifier.all_directories_being_watched.size.should be_eql(28) # all the directories should have watches
+
+    notifier.close!
+    notifier.all_directories_being_watched.size.should be_eql(0) # all watches should have been deleted
   end
 
 end
