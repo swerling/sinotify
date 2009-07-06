@@ -35,8 +35,12 @@ describe Sinotify do
 
   it "should properly create event mask from etypes" do
     notifier = Sinotify::Notifier.new('/tmp', :recurse => false, :etypes => [:create, :modify])
-    notifier.raw_mask.should be_eql(Sinotify::CREATE | Sinotify::MODIFY)
+
+    #decided to make raw_mask private: notifier.raw_mask.should be_eql(Sinotify::CREATE | Sinotify::MODIFY)
+
+    # should not be able to create a notifier using a bogus event type (eg. 'blah')
     lambda{Sinotify::Notifier.new('/tmp', :recurse => false, :etypes => [:blah])}.should raise_error
+    lambda{Sinotify::Notifier.new('/tmp', :recurse => false, :etypes => [:create, :blah])}.should raise_error
   end
 
   it "should properly create Event from PrimEvent" do
@@ -198,18 +202,16 @@ describe Sinotify do
       closes += 1 if event.etypes.include?(:close) 
     end
 
+    # Create, append to, and then delete a bunch of random files
     total_iterations = 1000
-    dirs_used = []
     total_iterations.times do 
       sub_dir = File.join(@test_root_dir, a_z[rand(a_z.size)])
-      dirs_used << sub_dir
       test_fn = File.join(sub_dir, "zzz#{rand(10000)}")
       FileUtils.touch test_fn
       File.open(test_fn, 'a'){|f| f << rand(1000).to_s }
       FileUtils.rm test_fn
     end
-    dirs_used.uniq!
-    puts "created and modified and deleted #{total_iterations} files in #{dirs_used.size} sub directories of #{@test_root_dir}"
+    puts "created and modified and deleted #{total_iterations} files in sub directories of #{@test_root_dir}"
 
     start_wait = Time.now
 

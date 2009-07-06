@@ -82,63 +82,46 @@ module Sinotify
       @watch_thread = nil
     end
     
-    def validate_etypes!
-      bad = self.etypes.detect{|etype| PrimEvent.mask_from_etype(etype).nil? }
-      raise "Unrecognized etype '#{bad}'. Please see valid list in docs for Sinotify::Event" if bad
-    end
-
     def on_directory?
       File.directory?(self.file_or_dir_name)
     end
 
     def watch!
-      raise "Already watching!" unless @watch_thread.nil?
       raise "Cannot reopen an inotifier. Create a new one instead" if self.closed?
-
-      # add subdirectories in the background
-      @child_dir_thread = Thread.new do 
-        begin
-          self.add_watches! 
-        rescue Exception => x
-          log "Exception: #{x}, trace: \n\t#{x.backtrace.join("\n\t")}", :error 
-        end
-      end 
-
-      @watch_thread = Thread.new do
-        begin
-          self.prim_notifier.each_event do |prim_event|
-            watch = self.watches[prim_event.watch_descriptor.to_s]
-            if event_is_noise?(prim_event, watch)
-              @spy_logger.debug("Sinotify::Notifier Spy: Skipping noise[#{prim_event.inspect}]") if @spy_logger
-            else
-              spy_on_event(prim_event)
-              if watch.nil?
-                self.log "Could not determine watch from descriptor #{prim_event.watch_descriptor}, something is wrong. Event: #{prim_event.inspect}", :warn
-              else
-                event = Sinotify::Event.from_prim_event_and_watch(prim_event, watch)
-                self.announce event
-                if event.has_etype?(:create) && event.directory?
-                  Thread.new do 
-                    # have to thread this because the :create event comes in _before_ the directory exists,
-                    # and inotify will not permit a watch on a file unless it exists
-                    sleep 0.1
-                    self.add_watch(event.path)
-                  end
-                end
-                # puts "REMOVING: #{event.inspect}, WATCH: #{self.watches[event.watch_descriptor.to_s]}" if event.has_etype?(:delete) && event.directory?
-                self.remove_watch(event.watch_descriptor) if event.has_etype?(:delete) && event.directory?
-                break if closed?
-              end
-            end
-        end
-        rescue Exception => x
-          log "Exception: #{x}, trace: \n\t#{x.backtrace.join("\n\t")}", :error 
-        end
-
-        log "Exiting thread for #{self}"
-      end
-
+      self.add_all_directories_in_background
+      self.start_prim_event_loop_thread
       return self
+    end
+
+    def close!
+      @closed = true
+      self.remove_all_watches
+    end
+
+    # Log a message every time a prim_event comes in (will be logged even if it is considered 'noise'),
+    # and log a message whenever an event is announced. Overrides Cosell's spy! method (and uses cosell's
+    # spy! to log announced events).
+    #
+    # Options:
+    #    :logger => The log to log to. Default is a logger on STDOUT
+    #    :level => The log level to log with. Default is :info
+    #
+    def spy!(opts = {})
+      @spy_logger = opts[:logger] || Logger.new(STDOUT)
+      @spy_logger_level = opts[:level] || :info
+      opts[:on] = Sinotify::Event
+      opts[:preface_with] = "Sinotify::Notifier Event Spy"
+      super(opts)
+    end
+
+    # Return a list of files/directories currently being watched. Will only contain one entry unless
+    # this notifier was setup on a directory with the option :recurse => true.
+    def all_directories_being_watched
+      self.watches.values.collect{|w| w.path }.sort
+    end
+
+    def watches
+      @watches ||= {}
     end
 
     def recurse?
@@ -149,37 +132,12 @@ module Sinotify
       "Sinotify::Notifier[#{self.file_or_dir_name}, :watches => #{self.watches.size}]"
     end
 
-    def close!
-      @closed = true
-      self.remove_all_watches
-    end
-
-    def raw_mask
-      @raw_mask ||= self.etypes.inject(0){|raw, etype| raw | PrimEvent.mask_from_etype(etype) }
-    end
-
-    def all_directories_being_watched
-      self.watches.values.collect{|w| w.path }
-    end
-
-    def watches
-      @watches ||= {}
-    end
-
-    # Log a message every time a prim_event comes in (will be logged even if it is considered 'noise'),
-    # and log a message whenever an event is announced.
-    # Options:
-    #    :logger => The log to log to. Default is a logger on STDOUT
-    #    :level => The log level to log with. Default is :info
-    def spy!(opts = {})
-      @spy_logger = opts[:logger] || Logger.new(STDOUT)
-      @spy_logger_level = opts[:level] || :info
-      opts[:on] = Sinotify::Event
-      opts[:preface_with] = "Sinotify::Notifier Event Spy"
-      super(opts)
-    end
-
     protected
+
+      def validate_etypes!
+        bad = self.etypes.detect{|etype| PrimEvent.mask_from_etype(etype).nil? }
+        raise "Unrecognized etype '#{bad}'. Please see valid list in docs for Sinotify::Event" if bad
+      end
 
       # some events we don't want to report (certain events are generated just from creating watches)
       def event_is_noise? prim_event, watch
@@ -197,6 +155,18 @@ module Sinotify
         return true if ["delete", "isdir"].eql?(etypes_strings)
 
         return false
+      end
+
+      # Open up a background thread that adds all the watches on @file_or_dir_name and,
+      # if @recurse is true, all of its subdirs.
+      def add_all_directories_in_background
+        @child_dir_thread = Thread.new do 
+          begin
+            self.add_watches! 
+          rescue Exception => x
+            log "Exception: #{x}, trace: \n\t#{x.backtrace.join("\n\t")}", :error 
+          end
+        end 
       end
 
       def add_watches!(fn = self.file_or_dir_name, throttle = 0)
@@ -257,6 +227,60 @@ module Sinotify
           msg = "Sinotify::Notifier Prim Event Spy: #{prim_event.inspect}"
           @spy_logger.send(@spy_logger_level, msg)
         end
+      end
+
+      # Listen for linux inotify events, and as they come in
+      #   1. adapt them into Sinotify::Event objects 
+      #   2. 'announce' them using Cosell. 
+      # By default, Cosell is setup to Queue the announcements in a bg thread.
+      #
+      # The references to two different logs in this method may be a bit confusing. The @spy_logger 
+      # exclusively logs (spys on) events and announcements. The "log" method instead uses the @logger
+      # and logs errors and exceptions. The @logger is defined when creating this object (using the :logger
+      # option), and the @spy_logger is defined in the :spy! method.
+      #
+      def start_prim_event_loop_thread
+
+        raise "Already watching!" unless @watch_thread.nil?
+
+        @watch_thread = Thread.new do
+          begin
+            self.prim_notifier.each_event do |prim_event|
+              watch = self.watches[prim_event.watch_descriptor.to_s]
+              if event_is_noise?(prim_event, watch)
+                @spy_logger.debug("Sinotify::Notifier Spy: Skipping noise[#{prim_event.inspect}]") if @spy_logger
+              else
+                spy_on_event(prim_event)
+                if watch.nil?
+                  self.log "Could not determine watch from descriptor #{prim_event.watch_descriptor}, something is wrong. Event: #{prim_event.inspect}", :warn
+                else
+                  event = Sinotify::Event.from_prim_event_and_watch(prim_event, watch)
+                  self.announce event
+                  if event.has_etype?(:create) && event.directory?
+                    Thread.new do 
+                      # have to thread this because the :create event comes in _before_ the directory exists,
+                      # and inotify will not permit a watch on a file unless it exists
+                      sleep 0.1
+                      self.add_watch(event.path)
+                    end
+                  end
+                  # puts "REMOVING: #{event.inspect}, WATCH: #{self.watches[event.watch_descriptor.to_s]}" if event.has_etype?(:delete) && event.directory?
+                  self.remove_watch(event.watch_descriptor) if event.has_etype?(:delete) && event.directory?
+                  break if closed?
+                end
+              end
+          end
+          rescue Exception => x
+            log "Exception: #{x}, trace: \n\t#{x.backtrace.join("\n\t")}", :error 
+          end
+
+          log "Exiting prim event loop thread for #{self}"
+        end
+
+      end
+
+      def raw_mask
+        @raw_mask ||= self.etypes.inject(0){|raw, etype| raw | PrimEvent.mask_from_etype(etype) }
       end
 
       # ruby gives warnings in verbose mode if you use attr_accessor to set these next few: 
