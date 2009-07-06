@@ -223,16 +223,18 @@ describe Sinotify do
     end
     puts "It took #{Time.now - start_wait} seconds for all the create/modify/delete/close events to come through"
 
-    pause! # give it a tiny bit longer to let any remaining modify/delete events stragglers to come through
+    pause!; pause! # give it a tiny bit longer to let any remaining modify/delete/close stragglers to come through
 
     puts "Ceates detected: #{creates}"
     puts "Deletes: #{deletes}"
     puts "Modifies: #{modifies}"
     puts "Closes: #{closes}"
+
     creates.should be_eql(total_iterations) 
     deletes.should be_eql(total_iterations) 
     modifies.should be_eql(total_iterations) 
     closes.should be_eql(2 * total_iterations) # should get a close both after the create and the modify
+
   end
 
 end
