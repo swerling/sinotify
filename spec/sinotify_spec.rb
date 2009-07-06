@@ -223,7 +223,7 @@ describe Sinotify do
     end
     puts "It took #{Time.now - start_wait} seconds for all the create/modify/delete/close events to come through"
 
-    pause!; pause! # give it a tiny bit longer to let any remaining modify/delete/close stragglers to come through
+    pause!; pause!; pause! # give it a tiny bit longer to let any remaining modify/delete/close stragglers to come through
 
     puts "Ceates detected: #{creates}"
     puts "Deletes: #{deletes}"
