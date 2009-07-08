@@ -1,5 +1,15 @@
 #include <ruby.h>
+
+// includes that are different for ruby 1.8 vs. ruby 1.9
+#ifdef RUBY_19
+//#warning "INCLUDING RUBY19 HEADERS"
+#include <ruby/io.h>
+#else
+//#warning "INCLUDING RUBY18 HEADERS" 
 #include <rubyio.h>
+
+#endif
+
 #ifdef HAVE_VERSION_H
 #include <version.h>
 #endif
@@ -8,8 +18,8 @@
 #include <asm/unistd.h>
 #include <linux/inotify.h>
 #else
-#include "sinotify.h"
-#include "sinotify-syscalls.h"
+#include "inotify.h"
+#include "inotify-syscalls.h"
 #endif
 
 #include <sys/syscall.h>
@@ -78,11 +88,6 @@ static VALUE rb_inotify_new(VALUE klass) {
  */
 
 static VALUE rb_inotify_add_watch(VALUE self, VALUE filename, VALUE mask) {
-#ifndef HAVE_TYPE_OPENFILE
-	rb_io_t *fptr;
-#else
-	OpenFile *fptr;
-#endif
 	int *fd, wd;
 	Data_Get_Struct(self, int, fd);
 	wd = inotify_add_watch(*fd, RSTRING_PTR(filename), NUM2INT(mask));
@@ -114,11 +119,6 @@ static VALUE rb_inotify_rm_watch(VALUE self, VALUE wdnum) {
  */
 
 static VALUE rb_inotify_each_event(VALUE self) {
-#ifndef HAVE_TYPE_OPENFILE
-	rb_io_t *fptr;
-#else
-	OpenFile *fptr;
-#endif
 	int *fd, r;
 	struct inotify_event *event, *pevent;
 	char buffer[16384];
