@@ -13,8 +13,8 @@ rescue LoadError
   end
 end
 
-ensure_in_path 'lib'
-require 'sinotify'
+#ensure_in_path 'lib'
+require File.join(File.dirname(__FILE__), 'lib/sinotify_info')
 
 task :default => 'spec:run'
 
@@ -29,5 +29,17 @@ PROJ.gem.dependencies = ['cosell']
 PROJ.spec.opts << '--color'
 
 PROJ.rdoc.opts = ["--inline-source"]
+
+namespace :my do
+  namespace :gem do
+    task :package => [:clobber] do
+      sh "rm -rf #{File.join(File.dirname(__FILE__), 'pkg')}"
+      sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.log')}"
+      sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.o')}"
+      sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.so')}"
+      Rake::Task['gem:package'].invoke
+    end
+  end
+end
 
 # EOF

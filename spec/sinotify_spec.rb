@@ -204,6 +204,7 @@ describe Sinotify do
     end
 
     # Create, append to, and then delete a bunch of random files
+    tiny_pause!
     total_iterations = 1000
     total_iterations.times do 
       sub_dir = File.join(@test_root_dir, a_z[rand(a_z.size)])

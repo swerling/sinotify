@@ -1,6 +1,5 @@
 pkg/
 ext/Makefile
-ext/Makefile
 ext/mkmf.log
 ext/*.o
 ext/*.so

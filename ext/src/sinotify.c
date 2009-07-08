@@ -2,10 +2,10 @@
 
 // includes that are different for ruby 1.8 vs. ruby 1.9
 #ifdef RUBY_19
-//#warning "INCLUDING RUBY19 HEADERS"
+#warning "INCLUDING RUBY19 HEADERS (not really a warning, just for info)"
 #include <ruby/io.h>
 #else
-//#warning "INCLUDING RUBY18 HEADERS" 
+#warning "INCLUDING RUBY18 HEADERS (not really a warning, just for info) "
 #include <rubyio.h>
 
 #endif
