@@ -28,4 +28,6 @@ PROJ.gem.extentions = FileList['ext/**/extconf.rb']
 PROJ.gem.dependencies = ['cosell']
 PROJ.spec.opts << '--color'
 
+PROJ.rdoc.opts = ["--inline-source"]
+
 # EOF

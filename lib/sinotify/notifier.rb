@@ -36,7 +36,7 @@ module Sinotify
     #      When recursing, a background thread drills down into all the child directories
     #      creating notifiers on them. The recurse_throttle tells the notifier how far
     #      to recurse before sleeping for 0.1 seconds, so that drilling down does not hog
-    #      the system on large directories.
+    #      the system on large directorie hierarchies.
     #      default is 10
     #    :etypes => 
     #      which inotify file system event types to listen for (eg :create, :delete, etc)
@@ -134,6 +134,8 @@ module Sinotify
 
     protected
 
+      #:stopdoc: 
+ 
       def validate_etypes!
         bad = self.etypes.detect{|etype| PrimEvent.mask_from_etype(etype).nil? }
         raise "Unrecognized etype '#{bad}'. Please see valid list in docs for Sinotify::Event" if bad
@@ -291,6 +293,7 @@ module Sinotify
       def closed?; @closed.eql?(true); end
       def closed= x; @closed = x; end
 
+      #:startdoc: 
   end
 end
 
