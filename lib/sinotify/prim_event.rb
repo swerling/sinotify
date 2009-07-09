@@ -7,7 +7,7 @@ module Sinotify
   # Most users of Sinotify will not want to listen for prim events, instead opting
   # to use a Sinotify::Notifier to listen for Sinotify::Events. See docs for those classes.
   #
-  # Methods :name, :mask, and :wd defined in c lib
+  # Methods :name, :mask, and :wd defined in sinotify.c
   #
   # For convenience, inotify masks are represented in the PrimEvent as an 'etype', 
   # which is just a ruby symbol corresponding to the mask. For instance, a mask
@@ -32,29 +32,29 @@ module Sinotify
 
     # map the constants defined in the 'c' lib to ruby symbols
     @@mask_to_etype_map = {
-      Sinotify::CREATE => :create,
-      Sinotify::MOVE => :move,
-      Sinotify::ACCESS => :access,
-      Sinotify::MODIFY => :modify,
-      Sinotify::ATTRIB => :attrib,
-      Sinotify::CLOSE_WRITE => :close_write,
-      Sinotify::CLOSE_NOWRITE => :close_nowrite,
-      Sinotify::OPEN => :open,
-      Sinotify::MOVED_FROM => :moved_from,
-      Sinotify::MOVED_TO => :moved_to,
-      Sinotify::DELETE => :delete,
-      Sinotify::DELETE_SELF => :delete_self,
-      Sinotify::MOVE_SELF => :move_self,
-      Sinotify::UNMOUNT => :unmount,
-      Sinotify::Q_OVERFLOW => :q_overflow,
-      Sinotify::IGNORED => :ignored,
-      Sinotify::CLOSE => :close,
-      Sinotify::MASK_ADD => :mask_add,
-      Sinotify::ISDIR => :isdir,
-      Sinotify::ONLYDIR => :onlydir,
-      Sinotify::DONT_FOLLOW => :dont_follow,
-      Sinotify::ONESHOT => :oneshot,
-      Sinotify::ALL_EVENTS => :all_events,
+      Sinotify::PrimEvent::CREATE => :create,
+      Sinotify::PrimEvent::MOVE => :move,
+      Sinotify::PrimEvent::ACCESS => :access,
+      Sinotify::PrimEvent::MODIFY => :modify,
+      Sinotify::PrimEvent::ATTRIB => :attrib,
+      Sinotify::PrimEvent::CLOSE_WRITE => :close_write,
+      Sinotify::PrimEvent::CLOSE_NOWRITE => :close_nowrite,
+      Sinotify::PrimEvent::OPEN => :open,
+      Sinotify::PrimEvent::MOVED_FROM => :moved_from,
+      Sinotify::PrimEvent::MOVED_TO => :moved_to,
+      Sinotify::PrimEvent::DELETE => :delete,
+      Sinotify::PrimEvent::DELETE_SELF => :delete_self,
+      Sinotify::PrimEvent::MOVE_SELF => :move_self,
+      Sinotify::PrimEvent::UNMOUNT => :unmount,
+      Sinotify::PrimEvent::Q_OVERFLOW => :q_overflow,
+      Sinotify::PrimEvent::IGNORED => :ignored,
+      Sinotify::PrimEvent::CLOSE => :close,
+      Sinotify::PrimEvent::MASK_ADD => :mask_add,
+      Sinotify::PrimEvent::ISDIR => :isdir,
+      Sinotify::PrimEvent::ONLYDIR => :onlydir,
+      Sinotify::PrimEvent::DONT_FOLLOW => :dont_follow,
+      Sinotify::PrimEvent::ONESHOT => :oneshot,
+      Sinotify::PrimEvent::ALL_EVENTS => :all_events,
     }
 
     @@etype_to_mask_map = {}

@@ -4,7 +4,12 @@ sinotify
 
 == DESCRIPTION:
 
+Primary difference with regular inotify wrapper libs is that the events are queued and emitted from a background
+thread. Also simplified the event model.
+TODO
+
 What is inotify: 
+
   on linux, type 'man inotify'
   on others, 'google inotify' 
 
@@ -16,6 +21,7 @@ xxVersion of ruby-inotify tweaked to:
 Inotify is a linux library for sending event notification when something on the file system
 has changed. (see 'man inotify' for detail). This is a wrapper for the linux inotify library
 for ruby. This package derived from aredridel's package (http://raa.ruby-lang.org/project/ruby-inotify/).
+
 Differences from aredridel's package:
 
  1. Use standard event pattern for notfication (rather than synchronous loop)
@@ -29,19 +35,55 @@ support 'sinai'.
 
 == FEATURES/PROBLEMS:
 
-* Not tested with ruby 1.9.
+* None known.
 
 == SYNOPSIS:
 
-  TODO
+Setup:
+
+  $ mkdir /tmp/sinotify_test
+  $ irb
+  require 'sinotify'
+  notifier = Sinotify::Notifier.new('/tmp/sinotify_test', :recurse => true, :etypes => [:create, :modify, :delete])
+  notifier.spy!(:logger => Logger.new('/tmp/inotify_events.log')) # optional event spy
+  notifier.when_announcing(Sinotify::Event) do |sinotify_event|
+    puts "Event happened at #{sinotify_event.timestamp} on #{sinotify_event.path}, etypes => #{sinotify_event.etypes.inspect}"
+  end
+  notifier.watch! # don't forget to start the watch
+
+Then in another linux console: 
+
+  $ touch /tmp/sinotify_test/hi && sleep 1 && echo 'hello' >> /tmp/sinotify_test/hi && sleep 1 && rm -r /tmp/sinotify_test
+  
+Back in irb you will see:
+
+  Event happened at Wed Jul 08 22:47:46 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:create]
+  Event happened at Wed Jul 08 22:47:47 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:modify]
+  Event happened at Wed Jul 08 22:47:48 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:delete]
+  Event happened at Wed Jul 08 22:47:48 -0400 2009 on /tmp/sinotify_test, etypes => [:delete]
+
+tail -n 50 -f /tmp/inotify_events.log:
+
+  ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:create], :mask => 100 ...
+  ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes =>  ...
+  ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:modify], :mask => 2 ...
+  ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => ...
+  ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:delete], :mask => 200 ...
+  ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => ...
+  ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => '', :etypes => [:delete_self], :mask => 400 ...
+  ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test', dir? => true, :etypes => [:delete]...
+
+    
 
 == REQUIREMENTS:
 
 * linux inotify dev libs
+* cosell announcements framework gem
 
 == INSTALL:
 
-* sudo gem install sinotify
+* sudo gem install cosell...
+* sudo gem install sinotify...
 
 == LICENSE:
 

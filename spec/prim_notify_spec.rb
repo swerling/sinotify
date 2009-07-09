@@ -12,7 +12,7 @@ describe Sinotify::PrimNotifier do
   end
 
   it "should be able to create and remove a watch descriptor" do
-    wd =  @inotify.add_watch("/tmp", Sinotify::CREATE)
+    wd =  @inotify.add_watch("/tmp", Sinotify::PrimEvent::CREATE)
     wd.class.should be_eql(Fixnum)
     wd.should_not be_eql(0)
     @inotify.rm_watch(wd).should be_true
@@ -21,14 +21,14 @@ describe Sinotify::PrimNotifier do
   it "should get events on watched directory and get name of altered file in watched directory" do
     test_fn = "/tmp/sinotify-test"
     FileUtils.rm_f test_fn 
-    wd = @inotify.add_watch("/tmp", Sinotify::DELETE | Sinotify::CREATE)
+    wd = @inotify.add_watch("/tmp", Sinotify::PrimEvent::DELETE | Sinotify::PrimEvent::CREATE)
     begin 
       FileUtils.touch test_fn
       @inotify.each_event do |ev|
         #puts "-----------#{ev.etypes.inspect}"
         ev.class.should be_eql(Sinotify::PrimEvent)
         ev.name.should be_eql('sinotify-test')
-        ev.mask.should be_eql(Sinotify::CREATE)
+        ev.mask.should be_eql(Sinotify::PrimEvent::CREATE)
         ev.has_etype?(:create).should be_true
         ev.etypes.size.should be_eql(1) 
         ev.inspect.should be_eql "<Sinotify::PrimEvent :name => 'sinotify-test', :etypes => [:create], :mask => 100, :watch_descriptor => 1>"
@@ -50,7 +50,7 @@ describe Sinotify::PrimNotifier do
   it "should get events on watched file" do
     test_fn = "/tmp/sinotify-test"
     FileUtils.touch test_fn 
-    wd = @inotify.add_watch(test_fn, Sinotify::ATTRIB | Sinotify::DELETE | Sinotify::MODIFY)
+    wd = @inotify.add_watch(test_fn, Sinotify::PrimEvent::ATTRIB | Sinotify::PrimEvent::DELETE | Sinotify::PrimEvent::MODIFY)
     begin 
       FileUtils.touch test_fn
       @inotify.each_event do |ev|

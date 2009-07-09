@@ -225,34 +225,10 @@ static VALUE rb_inotify_event_mask(VALUE self) {
 void Init_sinotify () {
 	rb_cSinotify = rb_define_module("Sinotify");
 
-  // The Inotify class
-  //rb_cNotifier = rb_define_class("Sinotify", rb_cObject);
+  //
+  // The Sinotify::PrimNotifier class
+  //
 	rb_cNotifier = rb_define_class_under(rb_cSinotify, "PrimNotifier", rb_cObject);
-
-  // following inotify masks taken from inotify lib, see 'man inotify', section
-	rb_const_set(rb_cSinotify, rb_intern("ACCESS"), INT2NUM(IN_ACCESS));
-	rb_const_set(rb_cSinotify, rb_intern("MODIFY"), INT2NUM(IN_MODIFY));
-	rb_const_set(rb_cSinotify, rb_intern("ATTRIB"), INT2NUM(IN_ATTRIB));
-	rb_const_set(rb_cSinotify, rb_intern("CLOSE_WRITE"), INT2NUM(IN_CLOSE_WRITE));
-	rb_const_set(rb_cSinotify, rb_intern("CLOSE_NOWRITE"), INT2NUM(IN_CLOSE_NOWRITE));
-	rb_const_set(rb_cSinotify, rb_intern("OPEN"), INT2NUM(IN_OPEN));
-	rb_const_set(rb_cSinotify, rb_intern("MOVED_FROM"), INT2NUM(IN_MOVED_FROM));
-	rb_const_set(rb_cSinotify, rb_intern("MOVED_TO"), INT2NUM(IN_MOVED_TO));
-	rb_const_set(rb_cSinotify, rb_intern("CREATE"), INT2NUM(IN_CREATE));
-	rb_const_set(rb_cSinotify, rb_intern("DELETE"), INT2NUM(IN_DELETE));
-	rb_const_set(rb_cSinotify, rb_intern("DELETE_SELF"), INT2NUM(IN_DELETE_SELF));
-	rb_const_set(rb_cSinotify, rb_intern("MOVE_SELF"), INT2NUM(IN_MOVE_SELF));
-	rb_const_set(rb_cSinotify, rb_intern("UNMOUNT"), INT2NUM(IN_UNMOUNT));
-	rb_const_set(rb_cSinotify, rb_intern("Q_OVERFLOW"), INT2NUM(IN_Q_OVERFLOW));
-	rb_const_set(rb_cSinotify, rb_intern("IGNORED"), INT2NUM(IN_IGNORED));
-	rb_const_set(rb_cSinotify, rb_intern("CLOSE"), INT2NUM(IN_CLOSE));
-	rb_const_set(rb_cSinotify, rb_intern("MOVE"), INT2NUM(IN_MOVE));
-	rb_const_set(rb_cSinotify, rb_intern("ONLYDIR"), INT2NUM(IN_ONLYDIR));
-	rb_const_set(rb_cSinotify, rb_intern("DONT_FOLLOW"), INT2NUM(IN_DONT_FOLLOW));
-	rb_const_set(rb_cSinotify, rb_intern("MASK_ADD"), INT2NUM(IN_MASK_ADD));
-	rb_const_set(rb_cSinotify, rb_intern("ISDIR"), INT2NUM(IN_ISDIR));
-	rb_const_set(rb_cSinotify, rb_intern("ONESHOT"), INT2NUM(IN_ONESHOT));
-	rb_const_set(rb_cSinotify, rb_intern("ALL_EVENTS"), INT2NUM(IN_ALL_EVENTS));
 
 	rb_define_singleton_method(rb_cNotifier, "new", rb_inotify_new, 0);
 	rb_define_method(rb_cNotifier, "add_watch", rb_inotify_add_watch, 2);
@@ -260,12 +236,38 @@ void Init_sinotify () {
 	rb_define_method(rb_cNotifier, "each_event", rb_inotify_each_event, 0);
 	rb_define_method(rb_cNotifier, "close", rb_inotify_close, 0);
 
-
+  //
   // The Sinotify::PrimEvent class
-  // (todo: get rid of inspect, move to ruby)
+  //
 	rb_cSinotifyEvent = rb_define_class_under(rb_cSinotify, "PrimEvent", rb_cObject);
 	rb_define_method(rb_cSinotifyEvent, "prim_name", rb_inotify_event_name, 0);
 	rb_define_method(rb_cSinotifyEvent, "prim_wd", rb_inotify_event_wd, 0);
 	rb_define_method(rb_cSinotifyEvent, "prim_mask", rb_inotify_event_mask, 0);
+
+  // following inotify masks taken from inotify lib, see 'man inotify', section
+	rb_const_set(rb_cSinotifyEvent, rb_intern("ACCESS"), INT2NUM(IN_ACCESS));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("MODIFY"), INT2NUM(IN_MODIFY));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("ATTRIB"), INT2NUM(IN_ATTRIB));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("CLOSE_WRITE"), INT2NUM(IN_CLOSE_WRITE));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("CLOSE_NOWRITE"), INT2NUM(IN_CLOSE_NOWRITE));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("OPEN"), INT2NUM(IN_OPEN));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("MOVED_FROM"), INT2NUM(IN_MOVED_FROM));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("MOVED_TO"), INT2NUM(IN_MOVED_TO));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("CREATE"), INT2NUM(IN_CREATE));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("DELETE"), INT2NUM(IN_DELETE));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("DELETE_SELF"), INT2NUM(IN_DELETE_SELF));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("MOVE_SELF"), INT2NUM(IN_MOVE_SELF));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("UNMOUNT"), INT2NUM(IN_UNMOUNT));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("Q_OVERFLOW"), INT2NUM(IN_Q_OVERFLOW));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("IGNORED"), INT2NUM(IN_IGNORED));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("CLOSE"), INT2NUM(IN_CLOSE));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("MOVE"), INT2NUM(IN_MOVE));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("ONLYDIR"), INT2NUM(IN_ONLYDIR));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("DONT_FOLLOW"), INT2NUM(IN_DONT_FOLLOW));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("MASK_ADD"), INT2NUM(IN_MASK_ADD));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("ISDIR"), INT2NUM(IN_ISDIR));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("ONESHOT"), INT2NUM(IN_ONESHOT));
+	rb_const_set(rb_cSinotifyEvent, rb_intern("ALL_EVENTS"), INT2NUM(IN_ALL_EVENTS));
+
 
 }

@@ -1,10 +1,10 @@
 module Sinotify
 
-  # :stopdoc:
   VERSION = '0.1.0'
+
+  # :stopdoc:
   LIBPATH = ::File.expand_path(::File.dirname(__FILE__)) + ::File::SEPARATOR
   PATH = ::File.dirname(LIBPATH) + ::File::SEPARATOR
-  # :startdoc:
 
   # Returns the version string for the library.
   #
@@ -40,6 +40,8 @@ module Sinotify
 
     Dir.glob(search_me).sort.each {|rb| require rb}
   end
+
+  # :startdoc:
 
 end  # module Sinotify
 

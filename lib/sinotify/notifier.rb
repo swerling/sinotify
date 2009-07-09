@@ -1,22 +1,46 @@
 module Sinotify
 
   #
-  #  Sinotify::Notifier can be created on a file or directory. Inotify events are
-  #  'announced' using a Cosell announcement queue.
+  #  Watch a directory or file for events like create, modify, delete, etc.
+  #  (See Sinotify::Event for full list). 
   #
   #  Example usage:
   #
-  #    # create a notifier on /tmp (and subdirs), and listen for :create, :modify, and :delete events. 
-  #    # (The ability to spy and assign a handler block to announced events comes from the Cosell mixin)
+  #    # Create a notifier on /tmp/sinotify_test (and subdirs), and listen for :create, :modify, and :delete events. 
   #
-  #    notifier = Sinotify::Notifier.new('/tmp', :recurse => true, :etypes => [:create, :modify, :delete])
-  #    notifier.spy!(Logger.new('/path/to/my/project/log/inotify_events.log'))
-  #    notifier.when_announcing(Sinotify::Event) do |sinotify_event|
-  #      puts "Event happened at #{sinotify_event.timestamp}, it is a #{sinotify_event.etype} on #{sinotify_event.full_path}"
-  #    end
+  #    Setup:
   #
-  #  There are slight differences between Sinotify events and linux inotify events. Please see Sinotify::Event
-  #  for details.
+  #      $ mkdir /tmp/sinotify_test
+  #      $ irb
+  #      require 'sinotify'
+  #      notifier = Sinotify::Notifier.new('/tmp/sinotify_test', :recurse => true, :etypes => [:create, :modify, :delete])
+  #      notifier.spy!(:logger => Logger.new('/tmp/inotify_events.log')) # optional event spy
+  #      notifier.when_announcing(Sinotify::Event) do |sinotify_event|
+  #        puts "Event happened at #{sinotify_event.timestamp} on #{sinotify_event.path}, etypes => #{sinotify_event.etypes.inspect}"
+  #      end
+  #      notifier.watch! # don't forget to start the watch
+  #
+  #  Then in another linux console: 
+  #
+  #    $ touch /tmp/sinotify_test/hi && sleep 1 && echo 'hello' >> /tmp/sinotify_test/hi && sleep 1 && rm -r /tmp/sinotify_test
+  #    
+  #  Back in irb you will see:
+  #
+  #    Event happened at Wed Jul 08 22:47:46 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:create]
+  #    Event happened at Wed Jul 08 22:47:47 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:modify]
+  #    Event happened at Wed Jul 08 22:47:48 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:delete]
+  #    Event happened at Wed Jul 08 22:47:48 -0400 2009 on /tmp/sinotify_test, etypes => [:delete]
+  #
+  #  tail -n 50 -f /tmp/inotify_events.log:
+  #
+  #    ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:create], :mask => 100, ...
+  #    ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => [:create]>
+  #    ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:modify], :mask => 2, ...
+  #    ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => [:modify]>
+  #    ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:delete], :mask => 200, ...
+  #    ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => [:delete]>
+  #    
+  #
   #
   class Notifier
     include Cosell
@@ -32,16 +56,19 @@ module Sinotify
     #      whether to automatically create watches on sub directories
     #      default: true if file_or_dir_name is a directory, else false
     #      raises if true and file_or_dir_name is not a directory
+    #
     #    :recurse_throttle => 
     #      When recursing, a background thread drills down into all the child directories
     #      creating notifiers on them. The recurse_throttle tells the notifier how far
     #      to recurse before sleeping for 0.1 seconds, so that drilling down does not hog
     #      the system on large directorie hierarchies.
     #      default is 10
+    #
     #    :etypes => 
     #      which inotify file system event types to listen for (eg :create, :delete, etc)
     #      See docs for Sinotify::Event for list of event types.
     #      default is :all_types
+    #
     #    :logger => 
     #      Where to log errors to. Default is Logger.new(STDOUT).
     #
@@ -282,7 +309,11 @@ module Sinotify
       end
 
       def raw_mask
-        @raw_mask ||= self.etypes.inject(0){|raw, etype| raw | PrimEvent.mask_from_etype(etype) }
+        if @raw_mask.nil?
+          (self.etypes << :delete_self) if self.etypes.include?(:delete)
+          @raw_mask = self.etypes.inject(0){|raw, etype| raw | PrimEvent.mask_from_etype(etype) }
+        end
+        @raw_mask
       end
 
       # ruby gives warnings in verbose mode if you use attr_accessor to set these next few: 

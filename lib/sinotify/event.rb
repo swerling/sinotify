@@ -1,35 +1,55 @@
 module Sinotify
 
   # 
-  # Sinotify events are 'announced' by Cosell as they come in to the Notifier.
-  # The list of event types is below. 
+  # Sinotify events are triggered as they come in to the Notifier.  (they would
+  # be 'announced' in the parlance of the Cosell announcement framework that
+  # sinotify uses). Each event has the 'path' of the file or dir that was
+  # effected, the timestamp of the event (generated in ruby, not at the
+  # primitive level), and whether the event was on a file or a directory. Also
+  # available is the event type, called the 'etype,' which can be :modify,
+  # :create, :delete, etc.  The list of event types is below. 
   #
-  # Also see Sinotify::PrimEvent
+  # A Sinotify::Event does not perfectly model a linux inotify event. See
+  # Sinotify::PrimEvent for that.
   #
-  # THIS EVENT CLASS DEVIATES FROM PRIMEVENT IN ONE SIGNIFICANT REGARD. Sinotify does not 
-  # pass events about children of a given directory, only about the directory (or file) itself.
-  # Example of difference: Let's say you
-  #   1. create a directory called '/tmp/test'
-  #   2. create a file called '/tmp/test/blah'
+  # THIS EVENT CLASS DEVIATES FROM Sinotify::PrimEvent IN ONE SIGNIFICANT REGARD. Sinotify does not 
+  # pass events about children of a given directory, it only passes events about the directory 
+  # (or file) itself. That is _not_ to say you can't setup a recursive watch in the Notifier class,
+  # just that _the event itself_ only pertains the the inode/file/directory being altered, not to 
+  # its children. 
+  #
+  # This is perhaps best illustrated by an example. Let's say you
+  #
+  #   1. Create a directory called '/tmp/test'
+  #   2. Create a file in '/tmp/test' called '/tmp/test/blah'
   #   3. You put a watch on the directory '/tmp/test'
-  #   4. You do a 'rm -rf /tmp/test' (thus deleting both the file /tmp/test/blah and 
-  #      the directory /tmp/test)
+  #   4. You then do a 'rm -rf /tmp/test' 
+  #      (thus deleting both the file /tmp/test/blah AND the directory /tmp/test)
   #
-  # In this example, Sinotify acts a little diffently from linux inotify. Linux inotify
-  # would send a couple of delete events -- a :delete event for /tmp/test with the 'name'
-  # of the event set to 'blah', indicating a file named 'blah' was deleted. Then, a :delete_self
-  # event would be sent.
+  # In linux inotify, you would get two events in this scenario, _both_ on the
+  # watch for the /tmp/test directory. One of the events would be a ':delete' event
+  # (that is, the mask of the event would be equal to
+  # Sinotify::PrimEvent::DELETE, or the 'etype' of the PrimEvent would equal
+  # ':delete'), and the 'name' slot in the event would be 'blah.' This is your
+  # cue that the event _really_ happened on a child of the thing being watched
+  # ('/tmp/test'), not to the directory itself. Since you deleted both the file
+  # and the directory with your 'rm -rf' command, another event would come in
+  # of the etype :delete_self for the directory, and 'is_dir' would be in the
+  # mask (ie. the mask would be Sinotify::PrimEvent::DELETE & Sinotify::PrimEvent::IS_DIR). 
   #
-  # In contrast, Sinotify::Notifier would send 2 events, both :delete events, 
-  # one where the full path is '/tmp/test/blah', and one for '/tmp/test'. In general, all 
-  # Sinotify events apply _to the thing that was altered_, not to its children. If there
-  # is an event where this is not the case, it should be considered a bug. 
+  # Sinotify events would be a bit different in the example above.
+  # You would still get 2 events, but both would be :delete events, 
+  # one where the 'path' is '/tmp/test', and the other where the 'path'
+  # is '/tmp/test/blah'. In the case of the event for '/tmp/test', the call
+  # to 'directory?' would return true.
   #
-  # If you want to work with an even notifier that works more like the low level linux inotify
-  # (receiving both :delete and :delete_self), you will have to work directly with PrimNotifier and 
-  # PrimEvent (along with there irritating synchronous event loop)
+  # If you want to work with an event notifier that works more like the low level linux inotify
+  # (receiving both :delete with name slot filled in and another event w/ :delete_self), 
+  # you will have to work directly with PrimNotifier and PrimEvent (along with their irritating 
+  # linux inotify-style blocking synchronous event loop)
   #
-  # Here is the list of possible events adapted from the definitions in [linux_src]/include/linux/inotify.h: 
+  # Here is the list of possible events adapted from the definitions
+  # in [linux_src]/include/linux/inotify.h: 
   #
   #   File related:
   #     :access	# File was accessed 
@@ -62,6 +82,8 @@ module Sinotify
   class Event
 
     attr_accessor :prim_event, :path, :timestamp, :is_dir
+
+    # a few attr declarations just so they show up in rdoc
 
     # Given a prim_event, and the Watch associated with the event's watch descriptor,
     # return a Sinotify::Event. 
@@ -100,17 +122,25 @@ module Sinotify
       @etypes = nil
     end
 
-    def inspect_or_to_s(show_prim_event = false)
-      prim_event = (show_prim_event)? ", :prim_event => #{self.prim_event.inspect}" : ''
-      "<#{self.class} :path => '#{self.path}', dir? => #{self.directory?}, :etypes => #{self.etypes.inspect rescue 'could not determine'}#{prim_event}>"
-    end
+    # The Sinotify::PrimEvent associated with this event (a straight 
+    # wrapper around the linux inotify event)
+    def prim_event; @prim_event; end
+
+    # The full path of the file or directory on which the event happened
+    def path; @path; end
+
+    # when the event happened
+    def timestamp; @timestamp; end
+
+
     def to_s; self.inspect_or_to_s(false); end
     def inspect; self.inspect_or_to_s(true); end
 
-    # etype/mask functions delegated to prim_event, EXCEPT: when :delete_self is in 
-    # the list, and path is a directory, change it to 'delete'. If you want
-    # the etypes in the original prim_event, ask for event.prim_event.etypes
+    # The etypes associated with this event (eg. :create, :modify, :delete, etc)
     def etypes
+      # The etype/mask functions delegated to prim_event, EXCEPT: when :delete_self is in 
+      # the list, and path is a directory, change it to 'delete'. If you want
+      # the etypes in the original prim_event, ask for event.prim_event.etypes
       if @etypes.nil?
         @etypes = self.prim_event.etypes
 
@@ -141,6 +171,15 @@ module Sinotify
       self.prim_event.watch_descriptor
     end
 
+    protected
+
+      # :stopdoc:
+      def inspect_or_to_s(show_prim_event = false)
+        prim_event = (show_prim_event)? ", :prim_event => #{self.prim_event.inspect}" : ''
+        "<#{self.class} :path => '#{self.path}', dir? => #{self.directory?}, :etypes => #{self.etypes.inspect rescue 'could not determine'}#{prim_event}>"
+      end
+
+      # :startdoc:
   end
 
 end
