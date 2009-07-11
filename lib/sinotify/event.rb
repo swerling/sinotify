@@ -1,18 +1,18 @@
 module Sinotify
 
   # 
-  # Sinotify events are triggered as they come in to the Notifier.  (they would
-  # be 'announced' in the parlance of the Cosell announcement framework that
-  # sinotify uses). Each event has the 'path' of the file or dir that was
-  # effected, the timestamp of the event (generated in ruby, not at the
-  # primitive level), and whether the event was on a file or a directory. Also
-  # available is the event type, called the 'etype,' which can be :modify,
-  # :create, :delete, etc.  The list of event types is below. 
+  # Sinotify events are triggered as they come in to the Notifier ('announced'
+  # in the parlance of the Cosell announcement framework that sinotify uses).
+  # Each event has the 'path' of the file or dir that was effected, the
+  # timestamp of the event (generated in ruby, not at the primitive level), and
+  # whether the event was on a file or a directory. Also available is the event
+  # type, called the 'etype,' which can be :modify, :create, :delete, etc.  The
+  # list of event types is below. 
   #
   # A Sinotify::Event does not perfectly model a linux inotify event. See
   # Sinotify::PrimEvent for that.
   #
-  # THIS EVENT CLASS DEVIATES FROM Sinotify::PrimEvent IN ONE SIGNIFICANT REGARD. Sinotify does not 
+  # This event class deviates from Sinotify::PrimEvent in one significant regard. Sinotify does not 
   # pass events about children of a given directory, it only passes events about the directory 
   # (or file) itself. That is _not_ to say you can't setup a recursive watch in the Notifier class,
   # just that _the event itself_ only pertains the the inode/file/directory being altered, not to 

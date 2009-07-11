@@ -29,6 +29,7 @@ PROJ.gem.dependencies = ['cosell']
 PROJ.spec.opts << '--color'
 
 PROJ.rdoc.opts = ["--inline-source"]
+PROJ.rdoc.exclude = ["^tasks/setup\.rb$", "\.[ch]$"]
 
 namespace :my do
   namespace :gem do

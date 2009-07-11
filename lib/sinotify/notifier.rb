@@ -4,42 +4,7 @@ module Sinotify
   #  Watch a directory or file for events like create, modify, delete, etc.
   #  (See Sinotify::Event for full list). 
   #
-  #  Example usage:
-  #
-  #    # Create a notifier on /tmp/sinotify_test (and subdirs), and listen for :create, :modify, and :delete events. 
-  #
-  #    Setup:
-  #
-  #      $ mkdir /tmp/sinotify_test
-  #      $ irb
-  #      require 'sinotify'
-  #      notifier = Sinotify::Notifier.new('/tmp/sinotify_test', :recurse => true, :etypes => [:create, :modify, :delete])
-  #      notifier.spy!(:logger => Logger.new('/tmp/inotify_events.log')) # optional event spy
-  #      notifier.when_announcing(Sinotify::Event) do |sinotify_event|
-  #        puts "Event happened at #{sinotify_event.timestamp} on #{sinotify_event.path}, etypes => #{sinotify_event.etypes.inspect}"
-  #      end
-  #      notifier.watch! # don't forget to start the watch
-  #
-  #  Then in another linux console: 
-  #
-  #    $ touch /tmp/sinotify_test/hi && sleep 1 && echo 'hello' >> /tmp/sinotify_test/hi && sleep 1 && rm -r /tmp/sinotify_test
-  #    
-  #  Back in irb you will see:
-  #
-  #    Event happened at Wed Jul 08 22:47:46 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:create]
-  #    Event happened at Wed Jul 08 22:47:47 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:modify]
-  #    Event happened at Wed Jul 08 22:47:48 -0400 2009 on /tmp/sinotify_test/hi, etypes => [:delete]
-  #    Event happened at Wed Jul 08 22:47:48 -0400 2009 on /tmp/sinotify_test, etypes => [:delete]
-  #
-  #  tail -n 50 -f /tmp/inotify_events.log:
-  #
-  #    ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:create], :mask => 100, ...
-  #    ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => [:create]>
-  #    ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:modify], :mask => 2, ...
-  #    ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => [:modify]>
-  #    ... INFO -- : Sinotify::Notifier Prim Event Spy: <Sinotify::PrimEvent :name => 'hi', :etypes => [:delete], :mask => 200, ...
-  #    ... INFO -- : Sinotify::Notifier Event Spy <Sinotify::Event :path => '/tmp/sinotify_test/hi', dir? => false, :etypes => [:delete]>
-  #    
+  #  See the synopsis section in the README.txt for example usage.
   #
   #
   class Notifier
@@ -72,6 +37,14 @@ module Sinotify
     #    :logger => 
     #      Where to log errors to. Default is Logger.new(STDOUT).
     #
+    #    :announcement_throttle =>
+    #      How many events can be announced at a time before the queue goes back to sleep for a cycle.
+    #      (ie. Cosell's 'announcements_per_cycle')
+    #
+    #    :announcements_sleep_time =>
+    #      How long the queue should sleep for before announcing the next batch of queued up 
+    #      Sinotify::Events (ie. Cosell's 'sleep_time')
+    #
     def initialize(file_or_dir_name, opts = {})
 
       initialize_cosell!  # init the announcements framework
@@ -94,11 +67,11 @@ module Sinotify
 
       # setup async announcements queue (part of the Cosell mixin)
       @logger = opts[:logger] || Logger.new(STDOUT)
-      sleep_time = opts[:announcements_sleep_time] || 0.05 # undocumented for now
-      announcements_per_cycle = opts[:announcements_per_cycle] || 50 # undocumented for now
+      sleep_time = opts[:announcements_sleep_time] || 0.05 
+      announcement_throttle = opts[:announcement_throttle] || 50 
       self.queue_announcements!(:sleep_time => sleep_time, 
                                 :logger => opts[:logger], 
-                                :announcements_per_cycle => announcements_per_cycle)
+                                :announcements_per_cycle => announcement_throttle)
 
       self.closed = false
 
@@ -109,10 +82,12 @@ module Sinotify
       @watch_thread = nil
     end
     
+    # whether this watch is on a directory
     def on_directory?
       File.directory?(self.file_or_dir_name)
     end
 
+    # Start watching for inotify file system events.
     def watch!
       raise "Cannot reopen an inotifier. Create a new one instead" if self.closed?
       self.add_all_directories_in_background
@@ -120,6 +95,7 @@ module Sinotify
       return self
     end
 
+    # Close this notifier. Notifiers cannot be reopened after close!. 
     def close!
       @closed = true
       self.remove_all_watches
@@ -151,6 +127,8 @@ module Sinotify
       @watches ||= {}
     end
 
+    # Whether this notifier watches all the files in all of the subdirectories
+    # of the directory being watched.
     def recurse?
       self.recurse
     end

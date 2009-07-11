@@ -64,12 +64,6 @@ static VALUE rb_inotify_event_new(struct inotify_event *event) {
 	return retval;
 }
 
-/*
- * call-seq: 
- *    Inotify.new => inotify
- *
- */
-
 static VALUE rb_inotify_new(VALUE klass) {
 	int *fd;
 	VALUE retval;
@@ -81,12 +75,6 @@ static VALUE rb_inotify_new(VALUE klass) {
 	return retval;
 }
 
-/*
- * call-seq: 
- *    inotify.add_watch(filename, Inotify::ALL_EVENTS) => watch number
- *
- */
-
 static VALUE rb_inotify_add_watch(VALUE self, VALUE filename, VALUE mask) {
 	int *fd, wd;
 	Data_Get_Struct(self, int, fd);
@@ -97,12 +85,6 @@ static VALUE rb_inotify_add_watch(VALUE self, VALUE filename, VALUE mask) {
 	return INT2NUM(wd);
 }
 
-/*
- * call-seq: 
- *    inotify.rm_watch(filename, wd) => true or raises exception.
- *
- */
-
 static VALUE rb_inotify_rm_watch(VALUE self, VALUE wdnum) {
 	int *fd;
 	Data_Get_Struct(self, int, fd);
@@ -111,12 +93,6 @@ static VALUE rb_inotify_rm_watch(VALUE self, VALUE wdnum) {
 	}
 	return Qtrue;
 }
-
-/*
- * call-seq: 
- *    inotify.each_event { |event| ... } 
- *
- */
 
 static VALUE rb_inotify_each_event(VALUE self) {
 	int *fd, r;
@@ -146,12 +122,6 @@ static VALUE rb_inotify_each_event(VALUE self) {
 	return Qnil;
 }
 
-/*
- * call-seq: 
- *    inotify.close => nil
- *
- */
-
 static VALUE rb_inotify_close(VALUE self) {
 	int *fd;
 	Data_Get_Struct(self, int, fd);
@@ -160,32 +130,6 @@ static VALUE rb_inotify_close(VALUE self) {
 	}
 	return Qnil;
 }
-
-/*
- * call-seq: 
- *    inotify_event.inspect => "<Sinotify::PrimEvent name=foo mask=0xdeadbeef wd=123>"
- *
- */
-
-/*
-static VALUE rb_inotify_event_inspect(VALUE self) {
-	struct inotify_event *event;
-	int len, pf;
-	char buf[1024]; 
-	Data_Get_Struct(self, struct inotify_event, event);
-	len = event->len;
-	/ * TODO: Check for string getting truncated * /
-	pf = snprintf(buf, 1024, "<Sinotify::PrimEvent name=%s mask=%ld wd=%d>", 
-	    event->name, event->mask, event->wd);
-	return rb_str_new2(buf);
-}
-*/
-
-/*
- * call-seq: 
- *    inotify_event.name => name or nil
- *
- */
 
 static VALUE rb_inotify_event_name(VALUE self) {
 	struct inotify_event *event;
@@ -197,24 +141,12 @@ static VALUE rb_inotify_event_name(VALUE self) {
 	}
 }
 
-/*
- * call-seq: 
- *    inotify_event.wd => watch descriptor
- *
- */
-
 static VALUE rb_inotify_event_wd(VALUE self) {
 	struct inotify_event *event;
 	Data_Get_Struct(self, struct inotify_event, event);
 	return INT2NUM(event->wd);
 }
 
-/*
- * call-seq: 
- *    inotify_event.mask => mask as defined by linux inotify lib 
- *    (see 'man inotify' section on inotify events)
- *
- */
 
 static VALUE rb_inotify_event_mask(VALUE self) {
 	struct inotify_event *event;

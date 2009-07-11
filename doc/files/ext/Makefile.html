@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>File: Makefile</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <meta http-equiv="Content-Script-Type" content="text/javascript" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+  <script type="text/javascript">
+  // <![CDATA[
+
+  function popupCode( url ) {
+    window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+  }
+
+  function toggleCode( id ) {
+    if ( document.getElementById )
+      elem = document.getElementById( id );
+    else if ( document.all )
+      elem = eval( "document.all." + id );
+    else
+      return false;
+
+    elemStyle = elem.style;
+    
+    if ( elemStyle.display != "block" ) {
+      elemStyle.display = "block"
+    } else {
+      elemStyle.display = "none"
+    }
+
+    return true;
+  }
+  
+  // Make codeblocks hidden by default
+  document.writeln( "<style type=\"text/css\">div.method-source-code { display: none }</style>" )
+  
+  // ]]>
+  </script>
+
+</head>
+<body>
+
+
+
+  <div id="fileHeader">
+    <h1>Makefile</h1>
+    <table class="header-table">
+    <tr class="top-aligned-row">
+      <td><strong>Path:</strong></td>
+      <td>ext/Makefile
+      </td>
+    </tr>
+    <tr class="top-aligned-row">
+      <td><strong>Last Update:</strong></td>
+      <td>Wed Jul 08 22:01:16 -0400 2009</td>
+    </tr>
+    </table>
+  </div>
+  <!-- banner header -->
+
+  <div id="bodyContent">
+
+
+
+  <div id="contextContent">
+
+    <div id="description">
+      <p>
+SHELL = /bin/sh
+</p>
+<p>
+#### Start of system configuration section. ####
+</p>
+<p>
+srcdir = src topdir = /usr/lib/ruby/1.8/i486-linux hdrdir = $(topdir) VPATH
+= $(srcdir):$(topdir):$(hdrdir) exec_prefix = $(prefix) prefix =
+$(DESTDIR)/usr sharedstatedir = $(prefix)/com mandir = $(prefix)/share/man
+psdir = $(docdir) oldincludedir = $(DESTDIR)/usr/include localedir =
+$(datarootdir)/locale bindir = $(exec_prefix)/bin libexecdir =
+$(prefix)/lib/ruby1.8 sitedir = $(DESTDIR)/usr/local/lib/site_ruby htmldir
+= $(docdir) vendorarchdir = $(vendorlibdir)/$(sitearch) includedir =
+$(prefix)/include infodir = $(prefix)/share/info vendorlibdir =
+$(vendordir)/$(ruby_version) sysconfdir = $(DESTDIR)/etc libdir =
+$(exec_prefix)/lib sbindir = $(exec_prefix)/sbin rubylibdir =
+$(libdir)/ruby/$(ruby_version) docdir = $(datarootdir)/doc/$(PACKAGE)
+dvidir = $(docdir) vendordir = $(libdir)/ruby/vendor_ruby datarootdir =
+$(prefix)/share pdfdir = $(docdir) archdir = $(rubylibdir)/$(arch)
+sitearchdir = $(sitelibdir)/$(sitearch) datadir = $(datarootdir)
+localstatedir = $(DESTDIR)/var sitelibdir = $(sitedir)/$(ruby_version)
+</p>
+<p>
+CC = cc LIBRUBY = $(LIBRUBY_SO) LIBRUBY_A = lib$(RUBY_SO_NAME)-static.a
+LIBRUBYARG_SHARED = -l$(RUBY_SO_NAME) LIBRUBYARG_STATIC =
+-l$(RUBY_SO_NAME)-static
+</p>
+<p>
+RUBY_EXTCONF_H = CFLAGS = -fPIC -fno-strict-aliasing -g -g -O2 -fPIC
+$(cflags) INCFLAGS = -I. -I$(topdir) -I$(hdrdir) -I$(srcdir) DEFS =
+-D_FILE_OFFSET_BITS=64 CPPFLAGS = -DHAVE_LINUX_INOTIFY_H $(DEFS)
+$(cppflags) CXXFLAGS = $(CFLAGS) ldflags = -L. -Wl,-Bsymbolic-functions
+-rdynamic -Wl,-export-dynamic dldflags = archflag = DLDFLAGS = $(ldflags)
+$(dldflags) $(archflag) LDSHARED = $(CC) -shared AR = ar EXEEXT =
+</p>
+<p>
+RUBY_INSTALL_NAME = ruby1.8 RUBY_SO_NAME = ruby1.8 arch = i486-linux
+sitearch = i486-linux ruby_version = 1.8 ruby = /usr/bin/ruby1.8 RUBY =
+$(ruby) RM = rm -f MAKEDIRS = mkdir -p INSTALL = /usr/bin/install -c
+INSTALL_PROG = $(INSTALL) -m 0755 INSTALL_DATA = $(INSTALL) -m 644 COPY =
+cp
+</p>
+<p>
+#### End of system configuration section. ####
+</p>
+<p>
+preload =
+</p>
+<p>
+libpath = . $(libdir) LIBPATH = -L. -L$(libdir) DEFFILE =
+</p>
+<p>
+CLEANFILES = mkmf.log DISTCLEANFILES =
+</p>
+<p>
+extout = extout_prefix = target_prefix = LOCAL_LIBS = LIBS =
+$(LIBRUBYARG_SHARED) -lpthread -ldl -lcrypt -lm -lc SRCS = sinotify.c OBJS
+= sinotify.o TARGET = sinotify DLLIB = $(TARGET).so EXTSTATIC = STATIC_LIB
+=
+</p>
+<p>
+BINDIR = $(bindir) RUBYCOMMONDIR = $(sitedir)$(target_prefix) RUBYLIBDIR =
+$(sitelibdir)$(target_prefix) RUBYARCHDIR = $(sitearchdir)$(target_prefix)
+</p>
+<p>
+TARGET_SO = $(DLLIB) CLEANLIBS = $(TARGET).so $(TARGET).il? $(TARGET).tds
+$(TARGET).map CLEANOBJS = *.o *.a *.s[ol] *.pdb *.exp *.bak
+</p>
+<p>
+all: $(DLLIB) static: $(STATIC_LIB)
+</p>
+<p>
+clean:
+</p>
+<pre>
+                @-$(RM) $(CLEANLIBS) $(CLEANOBJS) $(CLEANFILES)
+</pre>
+<p>
+distclean: clean
+</p>
+<pre>
+                @-$(RM) Makefile $(RUBY_EXTCONF_H) conftest.* mkmf.log
+                @-$(RM) core ruby$(EXEEXT) *~ $(DISTCLEANFILES)
+</pre>
+<p>
+realclean: distclean install: install-so install-rb
+</p>
+<p>
+install-so: $(RUBYARCHDIR) install-so: $(RUBYARCHDIR)/$(DLLIB)
+$(RUBYARCHDIR)/$(DLLIB): $(DLLIB)
+</p>
+<pre>
+        $(INSTALL_PROG) $(DLLIB) $(RUBYARCHDIR)
+</pre>
+<p>
+install-rb: pre-install-rb install-rb-default install-rb-default:
+pre-install-rb-default pre-install-rb: Makefile pre-install-rb-default:
+Makefile $(RUBYARCHDIR):
+</p>
+<pre>
+        $(MAKEDIRS) $@
+</pre>
+<p>
+site-install: site-install-so site-install-rb site-install-so: install-so
+site-install-rb: install-rb
+</p>
+<p>
+.SUFFIXES: .c .m .cc .cxx .cpp .C .o
+</p>
+<p>
+.cc.o:
+</p>
+<pre>
+        $(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $&lt;
+</pre>
+<p>
+.cxx.o:
+</p>
+<pre>
+        $(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $&lt;
+</pre>
+<p>
+.cpp.o:
+</p>
+<pre>
+        $(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $&lt;
+</pre>
+<p>
+.C.o:
+</p>
+<pre>
+        $(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $&lt;
+</pre>
+<p>
+.c.o:
+</p>
+<pre>
+        $(CC) $(INCFLAGS) $(CPPFLAGS) $(CFLAGS) -c $&lt;
+</pre>
+<p>
+$(DLLIB): $(OBJS)
+</p>
+<pre>
+        @-$(RM) $@
+        $(LDSHARED) -o $@ $(OBJS) $(LIBPATH) $(DLDFLAGS) $(LOCAL_LIBS) $(LIBS)
+</pre>
+<p>
+$(OBJS): ruby.h defines.h
+</p>
+
+    </div>
+
+
+   </div>
+
+
+  </div>
+
+
+    <!-- if includes -->
+
+    <div id="section">
+
+
+
+
+
+      
+
+
+    <!-- if method_list -->
+
+
+  </div>
+
+
+<div id="validator-badges">
+  <p><small><a href="http://validator.w3.org/check/referer">[Validate]</a></small></p>
+</div>
+
+</body>
+</html>

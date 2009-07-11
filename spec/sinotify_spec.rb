@@ -191,7 +191,7 @@ describe Sinotify do
     # Setup: create the notifier
     notifier = Sinotify::Notifier.new(@test_root_dir, 
                                       :announcements_sleep_time => 0.01,
-                                      :announcements_per_cycle => 10000,
+                                      :announcement_throttle => 10000,
                                       :etypes => [:create, :modify, :delete, :close],
                                       :recurse => true).watch!
     #notifier.spy!(:logger => Logger.new('/tmp/spy.log'))

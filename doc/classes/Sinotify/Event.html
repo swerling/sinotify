@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Class: Sinotify::Event</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <meta http-equiv="Content-Script-Type" content="text/javascript" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+  <script type="text/javascript">
+  // <![CDATA[
+
+  function popupCode( url ) {
+    window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+  }
+
+  function toggleCode( id ) {
+    if ( document.getElementById )
+      elem = document.getElementById( id );
+    else if ( document.all )
+      elem = eval( "document.all." + id );
+    else
+      return false;
+
+    elemStyle = elem.style;
+    
+    if ( elemStyle.display != "block" ) {
+      elemStyle.display = "block"
+    } else {
+      elemStyle.display = "none"
+    }
+
+    return true;
+  }
+  
+  // Make codeblocks hidden by default
+  document.writeln( "<style type=\"text/css\">div.method-source-code { display: none }</style>" )
+  
+  // ]]>
+  </script>
+
+</head>
+<body>
+
+
+
+    <div id="classHeader">
+        <table class="header-table">
+        <tr class="top-aligned-row">
+          <td><strong>Class</strong></td>
+          <td class="class-name-in-header">Sinotify::Event</td>
+        </tr>
+        <tr class="top-aligned-row">
+            <td><strong>In:</strong></td>
+            <td>
+                <a href="../../files/lib/sinotify/event_rb.html">
+                lib/sinotify/event.rb
+                </a>
+        <br />
+            </td>
+        </tr>
+
+        <tr class="top-aligned-row">
+            <td><strong>Parent:</strong></td>
+            <td>
+                Object
+            </td>
+        </tr>
+        </table>
+    </div>
+  <!-- banner header -->
+
+  <div id="bodyContent">
+
+
+
+  <div id="contextContent">
+
+    <div id="description">
+      <p>
+<a href="../Sinotify.html">Sinotify</a> events are triggered as they come
+in to the <a href="Notifier.html">Notifier</a> (&#8216;announced&#8217; in
+the parlance of the Cosell announcement framework that sinotify uses). Each
+event has the &#8216;<a href="Event.html#M000027">path</a>&#8217; of the
+file or dir that was effected, the <a
+href="Event.html#M000028">timestamp</a> of the event (generated in ruby,
+not at the primitive level), and whether the event was on a file or a
+directory. Also available is the event type, called the
+&#8216;etype,&#8217; which can be :modify, :create, :delete, etc. The list
+of event types is below.
+</p>
+<p>
+A <a href="Event.html">Sinotify::Event</a> does not perfectly model a linux
+inotify event. See <a href="PrimEvent.html">Sinotify::PrimEvent</a> for
+that.
+</p>
+<p>
+This event class deviates from <a
+href="PrimEvent.html">Sinotify::PrimEvent</a> in one significant regard. <a
+href="../Sinotify.html">Sinotify</a> does not pass events about children of
+a given directory, it only passes events about the directory (or file)
+itself. That is <em>not</em> to say you can&#8216;t setup a recursive watch
+in the <a href="Notifier.html">Notifier</a> class, just that _the event
+itself_ only pertains the the inode/file/directory being altered, not to
+its children.
+</p>
+<p>
+This is perhaps best illustrated by an example. Let&#8216;s say you
+</p>
+<pre>
+  1. Create a directory called '/tmp/test'
+  2. Create a file in '/tmp/test' called '/tmp/test/blah'
+  3. You put a watch on the directory '/tmp/test'
+  4. You then do a 'rm -rf /tmp/test'
+     (thus deleting both the file /tmp/test/blah AND the directory /tmp/test)
+</pre>
+<p>
+In linux inotify, you would get two events in this scenario, <em>both</em>
+on the watch for the /tmp/test directory. One of the events would be a
+&#8217;:delete&#8217; event (that is, the mask of the event would be equal
+to Sinotify::PrimEvent::DELETE, or the &#8216;etype&#8217; of the <a
+href="PrimEvent.html">PrimEvent</a> would equal &#8217;:delete&#8217;), and
+the &#8216;name&#8217; slot in the event would be &#8216;blah.&#8217; This
+is your cue that the event <em>really</em> happened on a child of the thing
+being watched (&#8217;/tmp/test&#8217;), not to the directory itself. Since
+you deleted both the file and the directory with your &#8216;rm -rf&#8217;
+command, another event would come in of the etype :delete_self for the
+directory, and &#8216;is_dir&#8217; would be in the mask (ie. the mask
+would be Sinotify::PrimEvent::DELETE &amp; Sinotify::PrimEvent::IS_DIR).
+</p>
+<p>
+<a href="../Sinotify.html">Sinotify</a> events would be a bit different in
+the example above. You would still get 2 events, but both would be :delete
+events, one where the &#8216;<a href="Event.html#M000027">path</a>&#8217;
+is &#8217;/tmp/test&#8217;, and the other where the &#8216;<a
+href="Event.html#M000027">path</a>&#8217; is &#8217;/tmp/test/blah&#8217;.
+In the case of the event for &#8217;/tmp/test&#8217;, the call to &#8216;<a
+href="Event.html#M000032">directory?</a>&#8217; would return true.
+</p>
+<p>
+If you want to work with an event notifier that works more like the low
+level linux inotify (receiving both :delete with name slot filled in and
+another event w/ :delete_self), you will have to work directly with
+PrimNotifier and <a href="PrimEvent.html">PrimEvent</a> (along with their
+irritating linux inotify-style blocking synchronous event loop)
+</p>
+<p>
+Here is the list of possible events adapted from the definitions in
+[linux_src]/include/linux/inotify.h:
+</p>
+<pre>
+  File related:
+    :access # File was accessed
+    :modify # file modified
+    :attrib # meta data changed
+    :close_write   # writable file was closed
+    :close_nowrite   # unwritable file was closed
+    :open  # file was opened
+    :moved_from # file moved from X
+    :moved_to  # file moved to Y
+    :create # file created
+    :delete # file deleted
+    :delete_self # self was deleted
+    :move_self  # self was moved
+
+ File related helpers:
+
+    :close  # (close_write | close_nowrite)
+    :move  # (moved_from | moved_to)
+
+ Misc events
+
+    :unmount # backing fs was unmounted
+    :q_overflow # event queue overflowed
+    :ignored  # file was ignored
+    :mask_add # added to mask of already existing event
+    :isdir # event occurred against dir
+    :oneshot # only send event once
+</pre>
+
+    </div>
+
+
+   </div>
+
+    <div id="method-list">
+      <h3 class="section-bar">Methods</h3>
+
+      <div class="name-list">
+      <a href="#M000032">directory?</a>&nbsp;&nbsp;
+      <a href="#M000031">etypes</a>&nbsp;&nbsp;
+      <a href="#M000024">from_prim_event_and_watch</a>&nbsp;&nbsp;
+      <a href="#M000033">has_etype?</a>&nbsp;&nbsp;
+      <a href="#M000030">inspect</a>&nbsp;&nbsp;
+      <a href="#M000025">new</a>&nbsp;&nbsp;
+      <a href="#M000027">path</a>&nbsp;&nbsp;
+      <a href="#M000026">prim_event</a>&nbsp;&nbsp;
+      <a href="#M000028">timestamp</a>&nbsp;&nbsp;
+      <a href="#M000029">to_s</a>&nbsp;&nbsp;
+      <a href="#M000034">watch_descriptor</a>&nbsp;&nbsp;
+      </div>
+    </div>
+
+  </div>
+
+
+    <!-- if includes -->
+
+    <div id="section">
+
+
+
+
+
+    <div id="attribute-list">
+      <h3 class="section-bar">Attributes</h3>
+
+      <div class="name-list">
+        <table>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">is_dir</td>
+          <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">path</td>
+          <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">prim_event</td>
+          <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">timestamp</td>
+          <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        </table>
+      </div>
+    </div>
+      
+
+
+    <!-- if method_list -->
+    <div id="methods">
+      <h3 class="section-bar">Public Class methods</h3>
+
+      <div id="method-M000024" class="method-detail">
+        <a name="M000024"></a>
+
+        <div class="method-heading">
+          <a href="#M000024" class="method-signature">
+          <span class="method-name">from_prim_event_and_watch</span><span class="method-args">(prim_event, watch)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Given a <a href="Event.html#M000026">prim_event</a>, and the <a
+href="Watch.html">Watch</a> associated with the event&#8216;s watch
+descriptor, return a <a href="Event.html">Sinotify::Event</a>.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000024-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000024-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 90</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">from_prim_event_and_watch</span>(<span class="ruby-identifier">prim_event</span>, <span class="ruby-identifier">watch</span>)
+      <span class="ruby-identifier">path</span> = <span class="ruby-identifier">watch</span>.<span class="ruby-identifier">path</span>         <span class="ruby-comment cmt"># path for the watch associated w/ this even</span>
+      <span class="ruby-identifier">is_dir</span> = <span class="ruby-identifier">watch</span>.<span class="ruby-identifier">directory?</span> <span class="ruby-comment cmt"># original watch was on a dir or a file?</span>
+
+      <span class="ruby-comment cmt"># This gets a little odd. The prim_event's 'name' field</span>
+      <span class="ruby-comment cmt"># will be nil if the change was to a directory itself, or if</span>
+      <span class="ruby-comment cmt"># the watch was on a file to begin with. However,</span>
+      <span class="ruby-comment cmt"># when a watch is on a dir, but the event occurs on a file in that dir</span>
+      <span class="ruby-comment cmt"># inotify sets the 'name' field to the file. :isdir will be in the etypes</span>
+      <span class="ruby-comment cmt"># if that file happens to be a subdir. Sinotify events do not</span>
+      <span class="ruby-comment cmt"># play this game, only sending events for the thing that was altered</span>
+      <span class="ruby-comment cmt"># in the first place. So right here is where we deduce if the </span>
+      <span class="ruby-comment cmt"># event was _really_ on a file or a dir.</span>
+      <span class="ruby-keyword kw">unless</span> <span class="ruby-identifier">prim_event</span>.<span class="ruby-identifier">name</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-identifier">path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">path</span>, <span class="ruby-identifier">prim_event</span>.<span class="ruby-identifier">name</span>) 
+        <span class="ruby-identifier">is_dir</span> = <span class="ruby-identifier">prim_event</span>.<span class="ruby-identifier">etypes</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">:isdir</span>)
+      <span class="ruby-keyword kw">end</span>
+
+      <span class="ruby-comment cmt"># is_dir must be passed along, since it may no longer exist (and thus cant be deduced later)</span>
+      <span class="ruby-comment cmt"># inotify prim_events to not retain enough information to make it possible to deduce the</span>
+      <span class="ruby-comment cmt"># original fullpath and whether it was a file or directory, so this info must be passed around.</span>
+      <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Sinotify</span><span class="ruby-operator">::</span><span class="ruby-constant">Event</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">:prim_event</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">prim_event</span>,
+                                 <span class="ruby-identifier">:path</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">path</span>,
+                                 <span class="ruby-identifier">:timestamp</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>, <span class="ruby-comment cmt"># any way to get this from prim event?</span>
+                                 <span class="ruby-identifier">:is_dir</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">is_dir</span>) 
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000025" class="method-detail">
+        <a name="M000025"></a>
+
+        <div class="method-heading">
+          <a href="#M000025" class="method-signature">
+          <span class="method-name">new</span><span class="method-args">(args={})</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000025-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000025-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 117</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">args</span>={})
+      <span class="ruby-identifier">args</span>.<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">k</span>,<span class="ruby-identifier">v</span><span class="ruby-operator">|</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;#{k}=&quot;</span>,<span class="ruby-identifier">v</span>)}
+      <span class="ruby-ivar">@timestamp</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>
+
+      <span class="ruby-comment cmt"># initialize a few variables just to shut up the ruby warnings</span>
+      <span class="ruby-ivar">@etypes</span> = <span class="ruby-keyword kw">nil</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-bar">Public Instance methods</h3>
+
+      <div id="method-M000032" class="method-detail">
+        <a name="M000032"></a>
+
+        <div class="method-heading">
+          <a href="#M000032" class="method-signature">
+          <span class="method-name">directory?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000032-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000032-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 162</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">directory?</span>
+      <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">is_dir</span>.<span class="ruby-identifier">eql?</span>(<span class="ruby-keyword kw">true</span>)
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000031" class="method-detail">
+        <a name="M000031"></a>
+
+        <div class="method-heading">
+          <a href="#M000031" class="method-signature">
+          <span class="method-name">etypes</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+The <a href="Event.html#M000031">etypes</a> associated with this event (eg.
+:create, :modify, :delete, etc)
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000031-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000031-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 140</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">etypes</span>
+      <span class="ruby-comment cmt"># The etype/mask functions delegated to prim_event, EXCEPT: when :delete_self is in </span>
+      <span class="ruby-comment cmt"># the list, and path is a directory, change it to 'delete'. If you want</span>
+      <span class="ruby-comment cmt"># the etypes in the original prim_event, ask for event.prim_event.etypes</span>
+      <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@etypes</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-ivar">@etypes</span> = <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">prim_event</span>.<span class="ruby-identifier">etypes</span>
+
+        <span class="ruby-comment cmt"># change :delete_self into :delete </span>
+        <span class="ruby-keyword kw">if</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">directory?</span> <span class="ruby-keyword kw">and</span> <span class="ruby-ivar">@etypes</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">:delete_self</span>)
+          <span class="ruby-ivar">@etypes</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">:delete_self</span>)
+          <span class="ruby-ivar">@etypes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">:delete</span>
+        <span class="ruby-keyword kw">end</span>
+
+        <span class="ruby-comment cmt"># add :close if :close_write or :close_nowrite are there, but :close is not</span>
+        <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@etypes</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">:close_write</span>) <span class="ruby-operator">||</span> <span class="ruby-ivar">@etypes</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">:close_nowrite</span>)
+          (<span class="ruby-ivar">@etypes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">:close</span>) <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@etypes</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">:close</span>)
+        <span class="ruby-keyword kw">end</span>
+
+      <span class="ruby-keyword kw">end</span>
+      <span class="ruby-ivar">@etypes</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000033" class="method-detail">
+        <a name="M000033"></a>
+
+        <div class="method-heading">
+          <a href="#M000033" class="method-signature">
+          <span class="method-name">has_etype?</span><span class="method-args">(etype)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000033-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000033-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 166</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">has_etype?</span> <span class="ruby-identifier">etype</span>
+      <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">etypes</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">etype</span>)
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000030" class="method-detail">
+        <a name="M000030"></a>
+
+        <div class="method-heading">
+          <a href="#M000030" class="method-signature">
+          <span class="method-name">inspect</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000030-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000030-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 137</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">inspect</span>; <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">inspect_or_to_s</span>(<span class="ruby-keyword kw">true</span>); <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000027" class="method-detail">
+        <a name="M000027"></a>
+
+        <div class="method-heading">
+          <a href="#M000027" class="method-signature">
+          <span class="method-name">path</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+The full <a href="Event.html#M000027">path</a> of the file or directory on
+which the event happened
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000027-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000027-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 130</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">path</span>; <span class="ruby-ivar">@path</span>; <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000026" class="method-detail">
+        <a name="M000026"></a>
+
+        <div class="method-heading">
+          <a href="#M000026" class="method-signature">
+          <span class="method-name">prim_event</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+The <a href="PrimEvent.html">Sinotify::PrimEvent</a> associated with this
+event (a straight wrapper around the linux inotify event)
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000026-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000026-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 127</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">prim_event</span>; <span class="ruby-ivar">@prim_event</span>; <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000028" class="method-detail">
+        <a name="M000028"></a>
+
+        <div class="method-heading">
+          <a href="#M000028" class="method-signature">
+          <span class="method-name">timestamp</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+when the event happened
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000028-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000028-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 133</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timestamp</span>; <span class="ruby-ivar">@timestamp</span>; <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000029" class="method-detail">
+        <a name="M000029"></a>
+
+        <div class="method-heading">
+          <a href="#M000029" class="method-signature">
+          <span class="method-name">to_s</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000029-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000029-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 136</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_s</span>; <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">inspect_or_to_s</span>(<span class="ruby-keyword kw">false</span>); <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000034" class="method-detail">
+        <a name="M000034"></a>
+
+        <div class="method-heading">
+          <a href="#M000034" class="method-signature">
+          <span class="method-name">watch_descriptor</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000034-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000034-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/sinotify/event.rb, line 170</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">watch_descriptor</span>
+      <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">prim_event</span>.<span class="ruby-identifier">watch_descriptor</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+
+
+  </div>
+
+
+<div id="validator-badges">
+  <p><small><a href="http://validator.w3.org/check/referer">[Validate]</a></small></p>
+</div>
+
+</body>
+</html>
