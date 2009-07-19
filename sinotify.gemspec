@@ -53,7 +53,7 @@ Selected quotes from the README for inotify:
   s.email = %q{sswerling@yahoo.com}
   s.extensions = ["ext/extconf.rb"]
   s.extra_rdoc_files = ["History.txt", "README.txt"]
-  s.files = [".gitignore", "History.txt", "README.rdoc", "README.txt", "Rakefile", "examples/watcher.rb", "ext/Makefile", "ext/extconf.rb", "ext/src/inotify-syscalls.h", "ext/src/inotify.h", "ext/src/sinotify.c", "lib/sinotify.rb", "lib/sinotify/event.rb", "lib/sinotify/notifier.rb", "lib/sinotify/prim_event.rb", "lib/sinotify/watch.rb", "lib/sinotify_info.rb", "sinotify.gemspec", "spec/prim_notify_spec.rb", "spec/sinotify_spec.rb", "spec/spec_helper.rb"]
+  s.files = [".gitignore", "History.txt", "README.rdoc", "README.txt", "Rakefile", "examples/watcher.rb", "ext/extconf.rb", "ext/src/inotify-syscalls.h", "ext/src/inotify.h", "ext/src/sinotify.c", "lib/sinotify.rb", "lib/sinotify/event.rb", "lib/sinotify/notifier.rb", "lib/sinotify/prim_event.rb", "lib/sinotify/watch.rb", "lib/sinotify_info.rb", "sinotify.gemspec", "spec/prim_notify_spec.rb", "spec/sinotify_spec.rb", "spec/spec_helper.rb"]
   s.homepage = %q{http://tab-a.slot-z.net}
   s.rdoc_options = ["--inline-source", "--main", "README.txt"]
   s.require_paths = ["lib", "ext"]
