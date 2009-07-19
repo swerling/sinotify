@@ -31,16 +31,20 @@ PROJ.rdoc.opts = ["--inline-source"]
 PROJ.rdoc.exclude = ["^tasks/setup\.rb$", "\.[ch]$"]
 
 task :default => 'spec:run'
-namespace :my do
-  namespace :gem do
-    task :package => [:clobber] do
-      sh "rm -rf #{File.join(File.dirname(__FILE__), 'pkg')}"
-      sh "rm -rf #{File.join(File.dirname(__FILE__), 'doc')}"
-      sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.log')}"
-      sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.o')}"
-      sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.so')}"
-      Rake::Task['gem:package'].invoke
-    end
-  end
+task :myclobber => [:clobber] do
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'pkg')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'doc')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.log')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.o')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.so')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/Makefile')}"
+end
+task :mypackage => [:myclobber] do
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'pkg')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'doc')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.log')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.o')}"
+  sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.so')}"
+  Rake::Task['gem:package'].invoke
 end
 
