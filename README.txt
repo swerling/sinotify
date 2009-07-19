@@ -1,6 +1,8 @@
-sinotify
-    by Steven Swerling
-    http://tab-a.slot-z.net
+sinotify 
+
+by {Steven Swerling}[http://tab-a.slot-z.net]
+
+{rdoc}[http://tab-a.slot-z.net] | {github}[http://www.github.com/swerling/sinotify]
 
 == DESCRIPTION:
 
