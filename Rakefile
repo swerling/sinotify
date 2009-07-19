@@ -14,10 +14,10 @@ rescue LoadError
 end
 
 #ensure_in_path 'lib'
+
 require File.join(File.dirname(__FILE__), 'lib/sinotify_info')
 
-task :default => 'spec:run'
-
+# bones gem settings
 PROJ.name = 'sinotify'
 PROJ.authors = 'Steven Swerling'
 PROJ.email = 'sswerling@yahoo.com'
@@ -27,14 +27,15 @@ PROJ.rubyforge.name = 'sinotify'
 PROJ.gem.extentions = FileList['ext/**/extconf.rb']
 PROJ.gem.dependencies = ['cosell']
 PROJ.spec.opts << '--color'
-
 PROJ.rdoc.opts = ["--inline-source"]
 PROJ.rdoc.exclude = ["^tasks/setup\.rb$", "\.[ch]$"]
 
+task :default => 'spec:run'
 namespace :my do
   namespace :gem do
     task :package => [:clobber] do
       sh "rm -rf #{File.join(File.dirname(__FILE__), 'pkg')}"
+      sh "rm -rf #{File.join(File.dirname(__FILE__), 'doc')}"
       sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.log')}"
       sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.o')}"
       sh "rm -rf #{File.join(File.dirname(__FILE__), 'ext/*.so')}"
@@ -43,4 +44,3 @@ namespace :my do
   end
 end
 
-# EOF
