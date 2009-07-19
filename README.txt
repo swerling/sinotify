@@ -4,7 +4,7 @@ sinotify
 
 == DESCRIPTION:
 
-ALPHA Alert -- just uploaded this. 
+ALPHA Alert -- just uploaded initial release. 
 
 Linux inotify is a means to receive events describing file system activity (create, modify, delete, close, etc). 
 
