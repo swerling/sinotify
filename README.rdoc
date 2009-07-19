@@ -109,6 +109,7 @@ tail -n 50 -f /tmp/inotify_spy.log:
 
 == INSTALL:
 
+* Todo: install instruction
 * sudo gem install cosell...
 * sudo gem install sinotify...
 
