@@ -60,7 +60,7 @@ module Sinotify
       # how many directories at a time to register. 
       self.recurse_throttle = opts[:recurse_throttle] || 10 
 
-      self.etypes = Array(opts[:etypes] || :all_events)
+      self.etypes = Array(opts[:etypes] || [:create, :modify, :delete])
       validate_etypes!
 
       self.prim_notifier = Sinotify::PrimNotifier.new
