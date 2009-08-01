@@ -37,6 +37,7 @@ PROJ.rdoc.exclude = ["^tasks/setup\.rb$", "\.[ch]$"]
 require 'fileutils'
 def this_dir; File.join(File.dirname(__FILE__)); end
 def doc_dir; File.join(this_dir, 'rdoc'); end
+def ext_dir; File.join(this_dir, 'ext'); end
 def tab_a_doc_dir; File.join(this_dir, '../tab-a/public/sinotify/rdoc'); end
 
 task :default => 'spec:run'
@@ -65,4 +66,7 @@ task :taba => [:mydoc] do
 end
 task :mygemspec => [:myclobber] do
   Rake::Task['gem:spec'].invoke
+end
+task :mybuild => [:myclobber] do
+  sh "cd #{ext_dir} && ruby extconf.rb && make"
 end

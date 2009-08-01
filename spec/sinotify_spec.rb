@@ -116,7 +116,7 @@ describe Sinotify do
     subdir_a = File.join(@test_root_dir, 'a')
     events = []
     notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
-    # notifier.spy!(:logger => spylog = Logger.new('/tmp/spy.log'))
+    notifier.spy!(:logger => spylog = Logger.new(STDOUT))
     notifier.when_announcing(Sinotify::Event) { |event|  events << event }
 
     # one watch for the root and the 26 subdirs 'a'..'z'
@@ -124,13 +124,21 @@ describe Sinotify do
     notifier.all_directories_being_watched.size.should be_eql(27) 
 
     # create a new subdir
-    FileUtils.mkdir File.join(@test_root_dir, 'a', 'abc')
+    subdir_abc = File.join(@test_root_dir, 'a', 'abc')
+    FileUtils.mkdir subdir_abc
     big_pause! # takes a moment to sink in because the watch is added in a bg thread
     notifier.all_directories_being_watched.size.should be_eql(28) 
     pause!
+
+    # create a file in the new subdir, it should send and event
+    file_in_subdir_abc = File.join(subdir_abc, 'new_file')
+    events_before = events.size
+    FileUtils.touch file_in_subdir_abc
+    pause!
+    events.size.should be_eql(events_before + 1)
   end
 
-  it "should delete watches for on subdirectires when a parent directory is deleted" do
+  it "should delete watches for on subdirectories when a parent directory is deleted" do
 
     # Setup (create the usual test dir and 26 subdirs, and an additional sub-subdir, and a file
     reset_test_dir! # creates the root dir and 'a'...'z'
