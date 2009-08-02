@@ -32,7 +32,8 @@ module Sinotify
     #    :etypes => 
     #      which inotify file system event types to listen for (eg :create, :delete, etc)
     #      See docs for Sinotify::Event for list of event types.
-    #      default is :all_types
+    #      default is [:create, :modify, :delete]
+    #      Use :all_events to trace everything (although this may be more than you bargained for).
     #
     #    :logger => 
     #      Where to log errors to. Default is Logger.new(STDOUT).
@@ -60,7 +61,7 @@ module Sinotify
       # how many directories at a time to register. 
       self.recurse_throttle = opts[:recurse_throttle] || 10 
 
-      self.etypes = Array(opts[:etypes] || [:create, :modify, :delete])
+      self.etypes = Array( opts[:etypes] || [:create, :modify, :delete] )
       validate_etypes!
 
       self.prim_notifier = Sinotify::PrimNotifier.new
@@ -80,6 +81,24 @@ module Sinotify
       @spy_logger = nil
       @spy_logger_level = nil
       @watch_thread = nil
+    end
+
+    # Sugar. 
+    #
+    # Equivalent of calling cosell's
+    #
+    #    self.when_announcing(Sinotify::Event) do |event| 
+    #      do_something_with_event(event) 
+    #    end
+    #
+    # becomes
+    #
+    #    self.on_event { |event| do_something_with_event(event) }
+    #
+    # Since this class only announces one kind of event, it made sense to 
+    # provide a more terse version of that statement.
+    def on_event &block
+      self.when_announcing(Sinotify::Event, &block)
     end
     
     # whether this watch is on a directory
@@ -108,10 +127,12 @@ module Sinotify
     # Options:
     #    :logger => The log to log to. Default is a logger on STDOUT
     #    :level => The log level to log with. Default is :info
+    #    :spy_on_prim_events => Spy on PrimEvents (raw inotify events) too
     #
     def spy!(opts = {})
-      @spy_logger = opts[:logger] || Logger.new(STDOUT)
-      @spy_logger_level = opts[:level] || :info
+      self.spy_on_prim_events = opts[:spy_on_prim_events].eql?(true)
+      self.spy_logger = opts[:logger] || Logger.new(STDOUT)
+      self.spy_logger_level = opts[:level] || :info
       opts[:on] = Sinotify::Event
       opts[:preface_with] = "Sinotify::Notifier Event Spy"
       super(opts)
@@ -141,6 +162,8 @@ module Sinotify
 
       #:stopdoc: 
  
+      attr_accessor :spy_on_prim_events, :spy_logger, :spy_logger_level
+
       def validate_etypes!
         bad = self.etypes.detect{|etype| PrimEvent.mask_from_etype(etype).nil? }
         raise "Unrecognized etype '#{bad}'. Please see valid list in docs for Sinotify::Event" if bad
@@ -229,13 +252,6 @@ module Sinotify
         self.logger.send(level, msg) if self.logger
       end
 
-      def spy_on_event(prim_event)
-        if @spy_logger
-          msg = "Sinotify::Notifier Prim Event Spy: #{prim_event.inspect}"
-          @spy_logger.send(@spy_logger_level, msg)
-        end
-      end
-
       # Listen for linux inotify events, and as they come in
       #   1. adapt them into Sinotify::Event objects 
       #   2. 'announce' them using Cosell. 
@@ -255,9 +271,9 @@ module Sinotify
             self.prim_notifier.each_event do |prim_event|
               watch = self.watches[prim_event.watch_descriptor.to_s]
               if event_is_noise?(prim_event, watch)
-                @spy_logger.debug("Sinotify::Notifier Spy: Skipping noise[#{prim_event.inspect}]") if @spy_logger
+                self.spy_logger.debug("Sinotify::Notifier Spy: Skipping noise[#{prim_event.inspect}]") if self.spy_on_prim_events
               else
-                spy_on_event(prim_event)
+                spy_on_prim_event(prim_event)
                 if watch.nil?
                   self.log "Could not determine watch from descriptor #{prim_event.watch_descriptor}, something is wrong. Event: #{prim_event.inspect}", :warn
                 else
@@ -292,6 +308,13 @@ module Sinotify
           @raw_mask = self.etypes.inject(0){|raw, etype| raw | PrimEvent.mask_from_etype(etype) }
         end
         @raw_mask
+      end
+
+      def spy_on_prim_event(prim_event)
+        if self.spy_on_prim_events
+          msg = "Sinotify::Notifier Prim Event Spy: #{prim_event.inspect}"
+          self.spy_logger.send(@spy_logger_level, msg)
+        end
       end
 
       # ruby gives warnings in verbose mode if you use attr_accessor to set these next few: 

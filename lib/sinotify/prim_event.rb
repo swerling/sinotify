@@ -60,10 +60,6 @@ module Sinotify
     @@etype_to_mask_map = {}
     @@mask_to_etype_map.each{|k,v| @@etype_to_mask_map[v] = k}
 
-#    def self.etype_from_mask(mask)
-#      @@mask_to_etype_map[mask]
-#    end
-
     def self.etype_from_mask(mask)
       @@mask_to_etype_map[mask]
     end

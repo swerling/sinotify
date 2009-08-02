@@ -15,11 +15,17 @@ end
 describe Sinotify do
 
   # A lot of Sinotify work occurs in background threads (eg. adding watches, adding subdirectories),
-  # so the tests may insert a tiny pause to allow the bg threads to do their thing before making
+  # so the tests may insert a tiny pauses to allow the bg threads to do their thing before making
   # any assertions. 
-  def tiny_pause!; sleep 0.05; end
-  def pause!; sleep 0.5; end
-  def big_pause!; sleep 1.5; end
+  def tiny_pause!
+    25.times{sleep 0.0001}
+  end
+  def pause!
+    25.times{sleep 0.005}
+  end
+  def big_pause!
+    10.times{sleep 0.1}
+  end
 
   def reset_test_dir!
     raise 'not gonna happen' unless @test_root_dir =~ /\/tmp\//
@@ -74,7 +80,9 @@ describe Sinotify do
     notifier.all_directories_being_watched.should be_eql([@test_root_dir])
 
     # make a watch, recurse TRUE. There should only be 27 watches (a-z, and @test_root_dir)
-    notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
+    notifier = Sinotify::Notifier.new(@test_root_dir, 
+                                      :etypes => [:all_events],
+                                      :recurse => true).watch!
     # notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
 
     pause!
@@ -83,7 +91,7 @@ describe Sinotify do
     # check a single announcement on a file in a subdir
     events = []
     test_fn = File.join(@test_root_dir, 'a', 'hi')
-    notifier.when_announcing(Sinotify::Event) { |event|  events << event }
+    notifier.on_event { |event| events << event }
     FileUtils.touch test_fn
     pause!
     #puts events.map{|e|e.to_s}.join("\n")
@@ -116,8 +124,8 @@ describe Sinotify do
     subdir_a = File.join(@test_root_dir, 'a')
     events = []
     notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
-    notifier.spy!(:logger => spylog = Logger.new(STDOUT))
-    notifier.when_announcing(Sinotify::Event) { |event|  events << event }
+    #notifier.spy!(:logger => spylog = Logger.new(STDOUT))
+    notifier.on_event { |event| events << event }
 
     # one watch for the root and the 26 subdirs 'a'..'z'
     pause!
@@ -126,7 +134,7 @@ describe Sinotify do
     # create a new subdir
     subdir_abc = File.join(@test_root_dir, 'a', 'abc')
     FileUtils.mkdir subdir_abc
-    big_pause! # takes a moment to sink in because the watch is added in a bg thread
+    pause! # takes a moment to sink in because the watch is added in a bg thread
     notifier.all_directories_being_watched.size.should be_eql(28) 
     pause!
 
@@ -151,7 +159,7 @@ describe Sinotify do
     events = []
     notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
     #notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
-    notifier.when_announcing(Sinotify::Event) { |event|  events << event }
+    notifier.on_event { |event|  events << event }
 
     # first assert: all directories should have a watch
     pause!
@@ -180,7 +188,7 @@ describe Sinotify do
     events = []
     notifier = Sinotify::Notifier.new(@test_root_dir, :recurse => true).watch!
     #notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
-    notifier.when_announcing(Sinotify::Event) { |event|  events << event }
+    notifier.on_event { |event|  events << event }
 
     # first assert: all directories should have a watch
     pause!
@@ -204,7 +212,7 @@ describe Sinotify do
                                       :recurse => true).watch!
     #notifier.spy!(:logger => Logger.new('/tmp/spy.log'))
     creates = deletes = modifies = closes = 0
-    notifier.when_announcing(Sinotify::Event) do |event|  
+    notifier.on_event do |event|  
       creates += 1 if event.etypes.include?(:create) 
       deletes += 1 if event.etypes.include?(:delete) 
       modifies += 1 if event.etypes.include?(:modify) 
@@ -234,9 +242,11 @@ describe Sinotify do
       break if waits > 30
       #raise "Tired of waiting for create events to reach #{total_iterations}, it is only at #{creates}" if waits > 30
     end
+
     puts "It took #{Time.now - start_wait} seconds for all the create/modify/delete/close events to come through"
 
-    pause!; pause!; pause! # give it a tiny bit longer to let any remaining modify/delete/close stragglers to come through
+    # give it a tiny bit longer to let any remaining modify/delete/close stragglers to come through
+    5.times{tiny_pause!}
 
     puts "Ceates detected: #{creates}"
     puts "Deletes: #{deletes}"

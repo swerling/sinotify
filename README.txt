@@ -65,10 +65,10 @@ Try this:
   require 'sinotify'
   notifier = Sinotify::Notifier.new('/tmp/sinotify_test', :recurse => true, :etypes => [:create, :modify, :delete])
   notifier.spy!(:logger => Logger.new('/tmp/inotify_spy.log')) # optional event spy
-  notifier.when_announcing(Sinotify::Event) do |sinotify_event|
+  notifier.on_event do |sinotify_event|
     puts "Event happened at #{sinotify_event.timestamp} on #{sinotify_event.path}, etypes => #{sinotify_event.etypes.inspect}"
   end
-  notifier.when_announcing(Sinotify::Event) do |sinotify_event|
+  notifier.on_event do |sinotify_event|
     puts "    --> demonstrate that multiple subscribers can be setup: #{sinotify_event.etypes.inspect}"
   end
   notifier.watch! # don't forget to start the watch
