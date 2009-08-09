@@ -1,0 +1,12 @@
+1. Refactor Notifier and Event so that other operating systems can be used for prim events.
+
+   Currently there are couplings between Event and PrimEvent that assume linux (easy to remove),
+   and couplings between Notifier and PrimEvent that assume linux (harder to remove, will need
+   an adapter class)
+
+2. Batch collate events
+
+   Currently if you remove or add a directory with lots of files, events are sent out for
+   every single file. Would be nice option if a single event listing all the changes went
+   out (say, a single event that sponges up all events for 150 milliseconds, then sends them
+   off as an array)
