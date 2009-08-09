@@ -71,7 +71,7 @@ module Sinotify
       sleep_time = opts[:announcements_sleep_time] || 0.05 
       announcement_throttle = opts[:announcement_throttle] || 50 
       self.queue_announcements!(:sleep_time => sleep_time, 
-                                :logger => opts[:logger], 
+                                :logger => @logger,
                                 :announcements_per_cycle => announcement_throttle)
 
       self.closed = false
