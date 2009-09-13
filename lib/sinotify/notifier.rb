@@ -118,6 +118,7 @@ module Sinotify
     def close!
       @closed = true
       self.remove_all_watches
+      self.kill_queue! # cosell
     end
 
     # Log a message every time a prim_event comes in (will be logged even if it is considered 'noise'),
@@ -230,7 +231,7 @@ module Sinotify
       # Remove the watch associated with the watch_descriptor passed in
       def remove_watch(watch_descriptor, prim_remove = false)
         if watches[watch_descriptor.to_s]
-          # puts "REMOVING: #{watch_descriptor}"
+          #logger.debug "REMOVING WATCH: #{watch_descriptor}"
           self.watches.delete(watch_descriptor.to_s)
 
           # the prim_notifier will complain if we remove a watch on a deleted file,
@@ -244,7 +245,9 @@ module Sinotify
       end
 
       def remove_all_watches
+        logger.debug "REMOVING ALL WATHCES"
         self.watches.keys.each{|watch_descriptor| self.remove_watch(watch_descriptor, true) }
+        @watches = nil
       end
 
       def log(msg, level = :debug)
