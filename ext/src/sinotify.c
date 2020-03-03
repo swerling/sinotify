@@ -48,6 +48,10 @@ int event_check (int fd) {
   struct timeval;
 	int r;
 
+  rb_fdset_t rfds;
+  rb_fd_init(&rfds);
+  rb_fd_set(fd, &rfds);
+  /*
 	fd_set rfds;
 	FD_ZERO(&rfds);
 	FD_SET(fd, &rfds);
@@ -55,6 +59,9 @@ int event_check (int fd) {
   // Not using timout anymore
 	r = rb_thread_select (fd+1, &rfds, NULL, NULL, NULL);
 	return r;
+  */
+  r = rb_thread_fd_select(fd+1, &rfds, NULL, NULL, NULL);
+  return r;
 }
 
 static VALUE rb_inotify_event_new(struct inotify_event *event) {

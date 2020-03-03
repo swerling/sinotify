@@ -4,7 +4,7 @@
 
 begin
   require 'bones'
-  Bones.setup
+  #Bones.setup
 rescue LoadError
   begin
     load 'tasks/setup.rb'
@@ -18,21 +18,17 @@ end
 require File.join(File.dirname(__FILE__), 'lib/sinotify_info')
 
 # bones gem settings
-PROJ.name = 'sinotify'
-PROJ.authors = 'Steven Swerling'
-PROJ.email = 'sswerling@yahoo.com'
-PROJ.url = 'http://tab-a.slot-z.net'
-PROJ.version = Sinotify::VERSION
-PROJ.rubyforge.name = 'sinotify'
-PROJ.gem.extentions = FileList['ext/**/extconf.rb']
-PROJ.gem.dependencies = ['cosell']
-PROJ.spec.opts << '--color'
-PROJ.rdoc.opts = ["--inline-source"]
-PROJ.rdoc.exclude = ["^tasks/setup\.rb$", "\.[ch]$"]
-
-
-
-
+#PROJ.name = 'sinotify'
+#PROJ.authors = 'Steven Swerling'
+#PROJ.email = 'sswerling@yahoo.com'
+#PROJ.url = 'http://tab-a.slot-z.net'
+#PROJ.version = Sinotify::VERSION
+#PROJ.rubyforge.name = 'sinotify'
+#PROJ.gem.extentions = FileList['ext/**/extconf.rb']
+#PROJ.gem.dependencies = ['cosell']
+#PROJ.spec.opts << '--color'
+#PROJ.rdoc.opts = ["--inline-source"]
+#PROJ.rdoc.exclude = ["^tasks/setup\.rb$", "\.[ch]$"]
 
 require 'fileutils'
 def this_dir; File.join(File.dirname(__FILE__)); end
@@ -57,7 +53,7 @@ task :mypackage => [:myclobber] do
 end
 task :mydoc => [:myclobber] do
   FileUtils.rm_f doc_dir()
-  sh "cd #{this_dir()} && rdoc -o rdoc --inline-source --format=html -T hanna README.rdoc lib/**/*.rb" 
+  sh "cd #{this_dir()} && rdoc -o rdoc --inline-source --format=html -T hanna README.rdoc lib/**/*.rb"
 end
 task :taba => [:mydoc] do
   this_dir = File.join(File.dirname(__FILE__))

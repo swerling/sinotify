@@ -81,8 +81,27 @@ module Sinotify
       @spy_logger = nil
       @spy_logger_level = nil
       @watch_thread = nil
+
+      setup_finalizer
     end
 
+    def setup_finalizer
+      descriptors = self.watches
+      prim = self.prim_notifier
+      finalizer = proc do
+        descriptors = watches.keys
+        puts descriptors.inpsect
+        descriptors.each {|watch_descriptor| prim.rm_watch(watch_descriptor.to_i)} 
+      end
+      ObjectSpace.define_finalizer(self, finalizer)
+    end
+
+    def self.finalize(watches)
+        self.watches.keys.each{|watch_descriptor| self.remove_watch(watch_descriptor, true) }
+        me.close!
+        me.logger.info("Sinotify garbage collected at #{Time.now}")
+    end
+     
     # Sugar. 
     #
     # Equivalent of calling cosell's
@@ -117,8 +136,8 @@ module Sinotify
     # Close this notifier. Notifiers cannot be reopened after close!. 
     def close!
       @closed = true
-      self.remove_all_watches
       self.kill_queue! # cosell
+      self.remove_all_watches
     end
 
     # Log a message every time a prim_event comes in (will be logged even if it is considered 'noise'),
@@ -231,11 +250,11 @@ module Sinotify
       # Remove the watch associated with the watch_descriptor passed in
       def remove_watch(watch_descriptor, prim_remove = false)
         if watches[watch_descriptor.to_s]
-          #logger.debug "REMOVING WATCH: #{watch_descriptor}"
+          #logger.debug "REMOVING WATCH: #{watch_descriptor}, prim_remove: #{prim_remove}"
           self.watches.delete(watch_descriptor.to_s)
 
           # the prim_notifier will complain if we remove a watch on a deleted file,
-          # since the watch will have automatically been removed already. Be default we
+          # since the watch will have automatically been removed already. By default we
           # don't care, but if caller is sure there are some prim watches to clean
           # up, then they can pass 'true' for prim_remove. Another way to handle
           # this would be to just default to true and fail silently, but trying this
@@ -245,7 +264,7 @@ module Sinotify
       end
 
       def remove_all_watches
-        logger.debug "REMOVING ALL WATHCES"
+        logger.debug "REMOVING ALL WATCHES"
         self.watches.keys.each{|watch_descriptor| self.remove_watch(watch_descriptor, true) }
         @watches = nil
       end
