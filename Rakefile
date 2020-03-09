@@ -2,16 +2,16 @@
 # configured in this Rakefile. The .rake files in the tasks directory
 # are where the options are used.
 
-begin
-  require 'bones'
-  #Bones.setup
-rescue LoadError
-  begin
-    load 'tasks/setup.rb'
-  rescue LoadError
-    raise RuntimeError, '### please install the "bones" gem ###'
-  end
-end
+#begin
+#  require 'bones'
+#  #Bones.setup
+#rescue LoadError
+#  begin
+#    load 'tasks/setup.rb'
+#  rescue LoadError
+#    raise RuntimeError, '### please install the "bones" gem ###'
+#  end
+#end
 
 #ensure_in_path 'lib'
 
@@ -37,7 +37,7 @@ def ext_dir; File.join(this_dir, 'ext'); end
 def tab_a_doc_dir; File.join(this_dir, '../tab-a/public/sinotify/rdoc'); end
 
 task :default => 'spec:run'
-task :myclobber => [:clobber] do
+task :myclobber do
   mydir = File.join(File.dirname(__FILE__))
   sh "rm -rf #{File.join(mydir, 'pkg')}"
   sh "rm -rf #{File.join(mydir, 'doc')}"
